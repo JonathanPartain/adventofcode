@@ -1,7 +1,7 @@
 :%s/\n//g -> u
 :%s/mul(\(\d\{1,3\}\),\(\d\{1,3\}\))/\rmul\1*\2\r/g -> s
 :g!/mul\d\{1,3\}\*\d\{1,3\}/d -> t
-ggVG:s/mul//<cr>kVgg:s/$\n/+<cr> -> f
+ggVG:s/mul//<cr>kVgg:s/$\n/+<cr>V:!bc -> f
 V"+Y -> y
 
 stage one
