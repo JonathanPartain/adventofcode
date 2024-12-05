@@ -1,6 +1,7 @@
-use std::{u32, usize};
+use std::{time::Instant, u32, usize};
 
 fn main() {
+    let start = Instant::now();
     let input = include_str!("../input.txt");
 
     let input_list: Vec<&str> = input.split("\n\n").collect();
@@ -42,6 +43,7 @@ fn main() {
     }
     println!("Part 1: {}", sum_middle);
     println!("Part 2: {}", sum_wrong);
+    println!("Execution time: {:.3?}", start.elapsed());
 }
 
 fn vecs_are_equal(v1: Vec<u32>, v2: Vec<u32>) -> (bool, u32) {
