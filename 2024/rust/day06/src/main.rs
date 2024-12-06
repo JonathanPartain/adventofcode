@@ -12,14 +12,14 @@ fn main() {
 
     // assume square map
 
-    part_one(start, &guard_map);
-    part_two(start, guard_map);
+    let places_to_check = part_one(start, &guard_map);
+    part_two(start, guard_map, places_to_check);
 }
 
-fn part_two(start: Instant, mut guard_map: Vec<Vec<&str>>) {
+fn part_two(start: Instant, mut guard_map: Vec<Vec<&str>>, check: HashSet<(i32, i32)>) {
     // assume square map
-    let width = guard_map.len();
-    let height = guard_map.len();
+    //let width = guard_map.len();
+    //let height = guard_map.len();
 
     // add start position
     // loop until done
@@ -28,17 +28,14 @@ fn part_two(start: Instant, mut guard_map: Vec<Vec<&str>>) {
     // run part one on map, if escape ignore
     // else, increase
     let mut loops = 0;
-    for y in 0..height {
-        for x in 0..width {
-            // place # at this position
-            if guard_map[x][y] == "." {
-                guard_map[x][y] = "#";
-                if is_loop(&guard_map) {
-                    loops += 1;
-                }
-                // set back to prev square
-                guard_map[x][y] = ".";
+    for (y, x) in check.clone().iter() {
+        if guard_map[*x as usize][*y as usize] == "." {
+            guard_map[*x as usize][*y as usize] = "#";
+            if is_loop(&guard_map) {
+                loops += 1;
             }
+            // set back to prev square
+            guard_map[*x as usize][*y as usize] = ".";
         }
     }
     println!("Part 2: {:?}", loops);
@@ -61,35 +58,30 @@ fn is_loop(guard_map: &Vec<Vec<&str>>) -> bool {
     let mut nexty: i32 = spy;
 
     // save state
-    let mut visited_positions: HashSet<(i32, i32)> = Default::default();
+    let mut visited_positions: HashSet<((i32, i32), String)> = Default::default();
 
     // add start position
-    visited_positions.extend(vec![(spx, spy)]);
-    let mut iterator = 0;
 
-    //for row in guard_map.clone().iter() {
-    //    println!("{:?}", row);
-    //}
     // loop until done
     loop {
-        // if bounds are breached, exit loop
-        if iterator > 10000 {
-            return true;
-        }
-
         let movement = get_move_dir(&guard);
 
         nextx += movement.0;
         nexty += movement.1;
+        //
+        // if bounds are breached, exit loop
         if nextx as usize >= width || nextx < 0 || nexty as usize >= height || nexty < 0 {
-            visited_positions.extend(vec![(spx, spy)]);
+            let dir = guard.clone();
+            visited_positions.insert(((spx, spy), dir));
             return false;
         }
         let next_tile = &guard_map[nexty as usize][nextx as usize];
         match next_tile {
             // save sp(x,y) in hashset, set  sp(x,y) to next
             &"." => {
-                visited_positions.extend(vec![(spx, spy)]);
+                if !visited_positions.insert(((spx, spy), guard.clone())) {
+                    return true;
+                }
                 spx = nextx;
                 spy = nexty;
             }
@@ -102,16 +94,17 @@ fn is_loop(guard_map: &Vec<Vec<&str>>) -> bool {
             // rotate guard
             _ => {
                 // treat as .
-                visited_positions.extend(vec![(spx, spy)]);
+                if !visited_positions.insert(((spx, spy), guard.clone())) {
+                    return true;
+                }
                 spx = nextx;
                 spy = nexty;
             }
         }
-        iterator += 1;
     }
 }
 
-fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) {
+fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) -> HashSet<(i32, i32)> {
     // assume square map
     let width = guard_map.len();
     let height = guard_map.len();
@@ -131,7 +124,7 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) {
     let mut visited_positions: HashSet<(i32, i32)> = Default::default();
 
     // add start position
-    visited_positions.extend(vec![(spx, spy)]);
+    visited_positions.insert((spx, spy));
     // loop until done
     loop {
         // if bounds are breached, exit loop
@@ -140,14 +133,14 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) {
         nextx += movement.0;
         nexty += movement.1;
         if nextx as usize >= width || nextx < 0 || nexty as usize >= height || nexty < 0 {
-            visited_positions.extend(vec![(spx, spy)]);
+            visited_positions.insert((spx, spy));
             break;
         }
         let next_tile = &guard_map[nexty as usize][nextx as usize];
         match next_tile {
             // save sp(x,y) in hashset, set  sp(x,y) to next
             &"." => {
-                visited_positions.extend(vec![(spx, spy)]);
+                visited_positions.insert((spx, spy));
                 spx = nextx;
                 spy = nexty;
             }
@@ -160,7 +153,7 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) {
             // rotate guard
             _ => {
                 // treat as .
-                visited_positions.extend(vec![(spx, spy)]);
+                visited_positions.insert((spx, spy));
                 spx = nextx;
                 spy = nexty;
             }
@@ -171,6 +164,7 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) {
     }
     println!("Part 1: {:?}", visited_positions.len());
     println!("Time elapsed: {:.3?}", start.elapsed());
+    return visited_positions;
 }
 fn rotate_guard(guard: &str) -> &str {
     match guard {
