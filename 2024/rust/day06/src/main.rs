@@ -5,21 +5,21 @@ fn main() {
     let start = Instant::now();
     let input = include_str!("../input.txt");
 
-    let guard_map: Vec<Vec<&str>> = input
+    let mut guard_map: Vec<Vec<&str>> = input
         .split_whitespace()
         .map(|c| c.split("").filter(|&cc| !cc.is_empty()).collect())
         .collect();
     // assume square map
     let width = guard_map.len();
-    let places_to_check = part_one(start, &guard_map, width);
-    part_two(start, guard_map, places_to_check, width);
+    let places_to_check = part_one(start, &guard_map, &width);
+    part_two(&start, &mut guard_map, &places_to_check, &width);
 }
 
 fn part_two(
-    start: Instant,
-    mut guard_map: Vec<Vec<&str>>,
-    check: HashSet<(i32, i32)>,
-    width: usize,
+    start: &Instant,
+    guard_map: &mut Vec<Vec<&str>>,
+    check: &HashSet<(i32, i32)>,
+    width: &usize,
 ) {
     // assume square map
 
@@ -30,20 +30,20 @@ fn part_two(
     // run part one on map, if escape ignore
     // else, increase
     let mut loops = 0;
-    for (y, x) in check.into_iter() {
+    for &(y, x) in check.iter() {
         if guard_map[x as usize][y as usize] == "." {
             guard_map[x as usize][y as usize] = "#";
             if is_loop(&guard_map, width) {
                 loops += 1;
             }
             // set back to prev square
-            guard_map[x as usize][y as usize] = ".";
+            guard_map[x as usize][y as usize] = &".";
         }
     }
     println!("Part 2: {:?}", loops);
     println!("Time elapsed: {:.3?}", start.elapsed());
 }
-fn is_loop(guard_map: &Vec<Vec<&str>>, width: usize) -> bool {
+fn is_loop(guard_map: &Vec<Vec<&str>>, width: &usize) -> bool {
     // assume square map
 
     // init positions
@@ -68,14 +68,14 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: usize) -> bool {
         nexty += movement.1;
         //
         // if bounds are breached, exit loop
-        if nextx as usize >= width || nextx < 0 || nexty as usize >= width || nexty < 0 {
+        if nextx as usize >= *width || nextx < 0 || nexty as usize >= *width || nexty < 0 {
             return false;
         }
         let next_tile = &guard_map[nexty as usize][nextx as usize];
         match next_tile {
             // save sp(x,y) in hashset, set  sp(x,y) to next
             &"." => {
-                if !visited_positions.insert(((spx, spy), guard.clone())) {
+                if !&visited_positions.insert(((spx, spy), guard.clone())) {
                     return true;
                 }
                 spx = nextx;
@@ -90,7 +90,7 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: usize) -> bool {
             // rotate guard
             _ => {
                 // treat as .
-                if !visited_positions.insert(((spx, spy), guard.clone())) {
+                if !&visited_positions.insert(((spx, spy), guard.clone())) {
                     return true;
                 }
                 spx = nextx;
@@ -100,7 +100,7 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: usize) -> bool {
     }
 }
 
-fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: usize) -> HashSet<(i32, i32)> {
+fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: &usize) -> HashSet<(i32, i32)> {
     // assume square map
 
     // init positions
@@ -126,7 +126,7 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: usize) -> HashSet
 
         nextx += movement.0;
         nexty += movement.1;
-        if nextx as usize >= width || nextx < 0 || nexty as usize >= width || nexty < 0 {
+        if nextx as usize >= *width || nextx < 0 || nexty as usize >= *width || nexty < 0 {
             visited_positions.insert((spx, spy));
             break;
         }
