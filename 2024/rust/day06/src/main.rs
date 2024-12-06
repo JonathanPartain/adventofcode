@@ -2,25 +2,26 @@ use core::panic;
 use std::{collections::HashSet, time::Instant, usize};
 
 fn main() {
+    let start = Instant::now();
     let input = include_str!("../input.txt");
 
     let guard_map: Vec<Vec<&str>> = input
         .split_whitespace()
         .map(|c| c.split("").filter(|&cc| !cc.is_empty()).collect())
         .collect();
-
     // assume square map
-
-    let start = Instant::now();
-    let places_to_check = part_one(start, &guard_map);
-    let part_2 = Instant::now();
-    part_two(part_2, guard_map, places_to_check);
+    let width = guard_map.len();
+    let places_to_check = part_one(start, &guard_map, width);
+    part_two(start, guard_map, places_to_check, width);
 }
 
-fn part_two(start: Instant, mut guard_map: Vec<Vec<&str>>, check: HashSet<(i32, i32)>) {
+fn part_two(
+    start: Instant,
+    mut guard_map: Vec<Vec<&str>>,
+    check: HashSet<(i32, i32)>,
+    width: usize,
+) {
     // assume square map
-    //let width = guard_map.len();
-    //let height = guard_map.len();
 
     // add start position
     // loop until done
@@ -29,23 +30,21 @@ fn part_two(start: Instant, mut guard_map: Vec<Vec<&str>>, check: HashSet<(i32, 
     // run part one on map, if escape ignore
     // else, increase
     let mut loops = 0;
-    for (y, x) in check.clone().iter() {
-        if guard_map[*x as usize][*y as usize] == "." {
-            guard_map[*x as usize][*y as usize] = "#";
-            if is_loop(&guard_map) {
+    for (y, x) in check.into_iter() {
+        if guard_map[x as usize][y as usize] == "." {
+            guard_map[x as usize][y as usize] = "#";
+            if is_loop(&guard_map, width) {
                 loops += 1;
             }
             // set back to prev square
-            guard_map[*x as usize][*y as usize] = ".";
+            guard_map[x as usize][y as usize] = ".";
         }
     }
     println!("Part 2: {:?}", loops);
     println!("Time elapsed: {:.3?}", start.elapsed());
 }
-fn is_loop(guard_map: &Vec<Vec<&str>>) -> bool {
+fn is_loop(guard_map: &Vec<Vec<&str>>, width: usize) -> bool {
     // assume square map
-    let width = guard_map.len();
-    let height = guard_map.len();
 
     // init positions
     let mut spy: i32;
@@ -61,8 +60,6 @@ fn is_loop(guard_map: &Vec<Vec<&str>>) -> bool {
     // save state
     let mut visited_positions: HashSet<((i32, i32), String)> = Default::default();
 
-    // add start position
-
     // loop until done
     loop {
         let movement = get_move_dir(&guard);
@@ -71,9 +68,7 @@ fn is_loop(guard_map: &Vec<Vec<&str>>) -> bool {
         nexty += movement.1;
         //
         // if bounds are breached, exit loop
-        if nextx as usize >= width || nextx < 0 || nexty as usize >= height || nexty < 0 {
-            let dir = guard.clone();
-            visited_positions.insert(((spx, spy), dir));
+        if nextx as usize >= width || nextx < 0 || nexty as usize >= width || nexty < 0 {
             return false;
         }
         let next_tile = &guard_map[nexty as usize][nextx as usize];
@@ -105,10 +100,8 @@ fn is_loop(guard_map: &Vec<Vec<&str>>) -> bool {
     }
 }
 
-fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) -> HashSet<(i32, i32)> {
+fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: usize) -> HashSet<(i32, i32)> {
     // assume square map
-    let width = guard_map.len();
-    let height = guard_map.len();
 
     // init positions
     let mut spy: i32;
@@ -133,7 +126,7 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>) -> HashSet<(i32, i32)> {
 
         nextx += movement.0;
         nexty += movement.1;
-        if nextx as usize >= width || nextx < 0 || nexty as usize >= height || nexty < 0 {
+        if nextx as usize >= width || nextx < 0 || nexty as usize >= width || nexty < 0 {
             visited_positions.insert((spx, spy));
             break;
         }
