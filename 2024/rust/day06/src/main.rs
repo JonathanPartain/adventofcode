@@ -2,7 +2,6 @@ use core::panic;
 use std::{collections::HashSet, time::Instant, usize};
 
 fn main() {
-    let start = Instant::now();
     let input = include_str!("../input.txt");
 
     let guard_map: Vec<Vec<&str>> = input
@@ -12,8 +11,10 @@ fn main() {
 
     // assume square map
 
+    let start = Instant::now();
     let places_to_check = part_one(start, &guard_map);
-    part_two(start, guard_map, places_to_check);
+    let part_2 = Instant::now();
+    part_two(part_2, guard_map, places_to_check);
 }
 
 fn part_two(start: Instant, mut guard_map: Vec<Vec<&str>>, check: HashSet<(i32, i32)>) {
