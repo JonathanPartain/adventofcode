@@ -5,19 +5,19 @@ fn main() {
     let start = Instant::now();
     let input = include_str!("../input.txt");
 
-    let mut guard_map: Vec<Vec<&str>> = input
+    let mut guard_map: Vec<Vec<char>> = input
         .split_whitespace()
-        .map(|c| c.split("").filter(|&cc| !cc.is_empty()).collect())
+        .map(|c| c.chars().collect())
         .collect();
     // assume square map
-    let width = guard_map.len();
+    let width = &guard_map.len();
     let places_to_check = part_one(start, &guard_map, &width);
     part_two(&start, &mut guard_map, &places_to_check, &width);
 }
 
 fn part_two(
     start: &Instant,
-    guard_map: &mut Vec<Vec<&str>>,
+    guard_map: &mut Vec<Vec<char>>,
     check: &HashSet<(i32, i32)>,
     width: &usize,
 ) {
@@ -31,25 +31,25 @@ fn part_two(
     // else, increase
     let mut loops = 0;
     for &(y, x) in check.iter() {
-        if guard_map[x as usize][y as usize] == "." {
-            guard_map[x as usize][y as usize] = "#";
-            if is_loop(&guard_map, width) {
+        if guard_map[x as usize][y as usize] == '.' {
+            guard_map[x as usize][y as usize] = '#';
+            if is_loop(guard_map, width) {
                 loops += 1;
             }
             // set back to prev square
-            guard_map[x as usize][y as usize] = &".";
+            guard_map[x as usize][y as usize] = '.';
         }
     }
     println!("Part 2: {:?}", loops);
     println!("Time elapsed: {:.3?}", start.elapsed());
 }
-fn is_loop(guard_map: &Vec<Vec<&str>>, width: &usize) -> bool {
+fn is_loop(guard_map: &Vec<Vec<char>>, width: &usize) -> bool {
     // assume square map
 
     // init positions
     let mut spy: i32;
     let mut spx: i32;
-    let mut guard: String;
+    let mut guard: char;
 
     ((spx, spy), guard) = get_start_position(&guard_map);
 
@@ -58,7 +58,7 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: &usize) -> bool {
     let mut nexty: i32 = spy;
 
     // save state
-    let mut visited_positions: HashSet<((i32, i32), String)> = Default::default();
+    let mut visited_positions: HashSet<((i32, i32), char)> = Default::default();
 
     // loop until done
     loop {
@@ -74,15 +74,15 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: &usize) -> bool {
         let next_tile = &guard_map[nexty as usize][nextx as usize];
         match next_tile {
             // save sp(x,y) in hashset, set  sp(x,y) to next
-            &"." => {
-                if !&visited_positions.insert(((spx, spy), guard.clone())) {
+            '.' => {
+                if !&visited_positions.insert(((spx, spy), guard)) {
                     return true;
                 }
                 spx = nextx;
                 spy = nexty;
             }
-            &"#" => {
-                guard = rotate_guard(&guard).to_string();
+            '#' => {
+                guard = rotate_guard(&guard);
                 // reset nextx, nexty
                 nextx = spx;
                 nexty = spy;
@@ -90,7 +90,7 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: &usize) -> bool {
             // rotate guard
             _ => {
                 // treat as .
-                if !&visited_positions.insert(((spx, spy), guard.clone())) {
+                if !&visited_positions.insert(((spx, spy), guard)) {
                     return true;
                 }
                 spx = nextx;
@@ -100,15 +100,15 @@ fn is_loop(guard_map: &Vec<Vec<&str>>, width: &usize) -> bool {
     }
 }
 
-fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: &usize) -> HashSet<(i32, i32)> {
+fn part_one(start: Instant, guard_map: &Vec<Vec<char>>, width: &usize) -> HashSet<(i32, i32)> {
     // assume square map
 
     // init positions
     let mut spy: i32;
     let mut spx: i32;
-    let mut guard: String;
+    let mut guard: char;
 
-    ((spx, spy), guard) = get_start_position(&guard_map);
+    ((spx, spy), guard) = get_start_position(guard_map);
 
     // same as start pos
     let mut nextx: i32 = spx;
@@ -133,13 +133,13 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: &usize) -> HashSe
         let next_tile = &guard_map[nexty as usize][nextx as usize];
         match next_tile {
             // save sp(x,y) in hashset, set  sp(x,y) to next
-            &"." => {
+            '.' => {
                 visited_positions.insert((spx, spy));
                 spx = nextx;
                 spy = nexty;
             }
-            &"#" => {
-                guard = rotate_guard(&guard).to_string();
+            '#' => {
+                guard = rotate_guard(&guard);
                 // reset nextx, nexty
                 nextx = spx;
                 nexty = spy;
@@ -160,34 +160,33 @@ fn part_one(start: Instant, guard_map: &Vec<Vec<&str>>, width: &usize) -> HashSe
     println!("Time elapsed: {:.3?}", start.elapsed());
     return visited_positions;
 }
-fn rotate_guard(guard: &str) -> &str {
+fn rotate_guard(guard: &char) -> char {
     match guard {
-        "^" => ">",
-        ">" => "v",
-        "v" => "<",
-        "<" => "^",
+        '^' => '>',
+        '>' => 'v',
+        'v' => '<',
+        '<' => '^',
         _ => panic!("This should never happen, panic of rotate guard"),
     }
 }
 
-fn get_move_dir(guard: &str) -> (i32, i32) {
+fn get_move_dir(guard: &char) -> (i32, i32) {
     let m = match guard {
-        "^" => (0, -1),
-        ">" => (1, 0),
-        "v" => (0, 1),
-        "<" => (-1, 0),
+        '^' => (0, -1),
+        '>' => (1, 0),
+        'v' => (0, 1),
+        '<' => (-1, 0),
         _ => panic!("This should never happen, panic of move-dir guard"),
     };
     return m;
 }
 
 // rotation is e(ast), (s)outh, (w)est, (n)orth
-fn get_start_position(guard_map: &Vec<Vec<&str>>) -> ((i32, i32), String) {
-    let targets = ["v", "^", ">", "<"];
+fn get_start_position(guard_map: &Vec<Vec<char>>) -> ((i32, i32), char) {
     for (row, line) in guard_map.iter().enumerate() {
-        if let Some((col, &symb)) = line.iter().enumerate().find(|(_, &v)| targets.contains(&v)) {
-            return ((col as i32, row as i32), symb.to_string());
+        if let Some(col) = line.iter().position(|&c| c == '^') {
+            return ((col as i32, row as i32), '^');
         }
     }
-    return ((0, 0), "r".to_string());
+    return ((0, 0), 'r');
 }
