@@ -1,10 +1,9 @@
 use std::{collections::HashMap, collections::HashSet, usize};
 
 fn main() {
-    let input = include_str!("../small.txt");
-    let char_2d: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
-    let limit = char_2d.len();
-    println!("{:?}", char_2d);
+    let input = include_str!("../input.txt");
+    let mut char_2d: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
+    let limit: i32 = char_2d.len().try_into().unwrap();
 
     let mut char_pos: HashMap<(usize, usize), char> = Default::default();
     let mut existing_chars: HashSet<char> = Default::default();
@@ -17,15 +16,18 @@ fn main() {
             }
         }
     }
-    println!("{:?}", char_pos);
-    part_one(&char_pos, &existing_chars, limit);
+
+    let ans = part_one(&char_pos, &existing_chars, limit);
+    for a in ans.iter() {
+        char_2d[a.1][a.0] = '#';
+    }
 }
 
 fn part_one(
     char_pos: &HashMap<(usize, usize), char>,
     existing_chars: &HashSet<char>,
-    limit: usize,
-) {
+    limit: i32,
+) -> HashSet<(usize, usize)> {
     let mut antinode_pos: HashSet<(usize, usize)> = Default::default();
 
     for char_type in existing_chars.iter() {
@@ -35,45 +37,67 @@ fn part_one(
             .map(|(&k, _)| k)
             .collect();
 
-        println!("{:?} positions: {:?}", char_type, positions);
         antinode_pos.extend(get_antinodes(&positions, &limit));
     }
+    // remove those whose position also exist in char_pos
+    //antinode_pos.retain(|pos| !char_pos.contains_key(pos));
+    println!("Part 1: {:?}", antinode_pos.len());
+    return antinode_pos;
 }
 
-fn get_antinodes(positions: &Vec<(usize, usize)>, limit: &usize) -> HashSet<(usize, usize)> {
+fn get_antinodes(positions: &Vec<(usize, usize)>, limit: &i32) -> HashSet<(usize, usize)> {
     let mut anti_nodes: HashSet<(usize, usize)> = Default::default();
     for (i_ind, i) in positions.iter().enumerate() {
         for (j_ind, j) in positions.iter().enumerate() {
-            if i_ind != j_ind {
-                let x = (i.0).abs_diff(j.0);
-                let y = (i.1).abs_diff(j.1);
-                // get 2 possible places
-                let p10 = i.0.checked_sub(x);
-                let p11 = i.1.checked_sub(y);
-                if p10.is_some() && p11.is_some() {
-                    let p1 = (p10.unwrap(), p11.unwrap());
-                    if !positions.contains(&p1)
-                        && p1.0 > 0
-                        && &p1.0 < limit
-                        && p1.1 > 0
-                        && &p1.1 < limit
-                    {
-                        anti_nodes.insert(p1);
+            if i_ind < j_ind {
+                let x_diff = (i.0).abs_diff(j.0);
+                let y_diff = (i.1).abs_diff(j.1);
+
+                // anti-nodes
+                let left_x: i32;
+                let left_y: i32;
+
+                let right_x: i32;
+                let right_y: i32;
+
+                //
+
+                // ROW
+                if i.0 < j.0 {
+                    left_x = i.0 as i32 - x_diff as i32;
+                    right_x = j.0 as i32 + x_diff as i32;
+                    // COLUMN
+                    if i.1 < j.1 {
+                        left_y = i.1 as i32 - y_diff as i32;
+
+                        right_y = j.1 as i32 + y_diff as i32;
+                    } else {
+                        left_y = i.1 as i32 + y_diff as i32;
+                        right_y = j.1 as i32 - y_diff as i32;
+                    }
+                } else {
+                    left_x = j.0 as i32 - x_diff as i32;
+                    right_x = i.0 as i32 + x_diff as i32;
+                    // COLUMN
+                    if i.1 < j.1 {
+                        left_y = j.1 as i32 + y_diff as i32;
+                        right_y = i.1 as i32 - y_diff as i32;
+                    } else {
+                        right_y = i.1 as i32 + y_diff as i32;
+                        left_y = j.1 as i32 - y_diff as i32;
                     }
                 }
-
-                let p2: (usize, usize) = (i.0 + x, i.1 + y);
-                if !positions.contains(&p2)
-                    && p2.0 > 0
-                    && &p2.0 < limit
-                    && p2.1 > 0
-                    && &p2.1 < limit
-                {
-                    anti_nodes.insert(p2);
+                // COLUMN
+                // the two positions are (left_x, left_y) and (right_x, right_y)
+                if left_x >= 0 && &left_x < limit && left_y >= 0 && &left_y < limit {
+                    anti_nodes.insert((left_x.try_into().unwrap(), left_y.try_into().unwrap()));
+                }
+                //
+                if right_x >= 0 && &right_x < limit && right_y >= 0 && &right_y < limit {
+                    anti_nodes.insert((right_x.try_into().unwrap(), right_y.try_into().unwrap()));
                 }
             }
         }
     }
-    println!("antinodes: {:?}, len: {:?}", anti_nodes, anti_nodes.len());
     return anti_nodes;
 }
