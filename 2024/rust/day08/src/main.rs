@@ -48,8 +48,8 @@ fn get_antinodes(positions: &Vec<(usize, usize)>, limit: &usize) -> HashSet<(usi
                 let x = (i.0).abs_diff(j.0);
                 let y = (i.1).abs_diff(j.1);
                 // get 2 possible places
-                let p10 = j.0.checked_sub(x);
-                let p11 = j.1.checked_sub(y);
+                let p10 = i.0.checked_sub(x);
+                let p11 = i.1.checked_sub(y);
                 if p10.is_some() && p11.is_some() {
                     let p1 = (p10.unwrap(), p11.unwrap());
                     if !positions.contains(&p1)
@@ -62,7 +62,7 @@ fn get_antinodes(positions: &Vec<(usize, usize)>, limit: &usize) -> HashSet<(usi
                     }
                 }
 
-                let p2: (usize, usize) = (j.0 + x, j.1 + y);
+                let p2: (usize, usize) = (i.0 + x, i.1 + y);
                 if !positions.contains(&p2)
                     && p2.0 > 0
                     && &p2.0 < limit
