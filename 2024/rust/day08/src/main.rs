@@ -1,4 +1,7 @@
-use std::{collections::HashMap, collections::HashSet, usize};
+use std::{
+    collections::{HashMap, HashSet},
+    usize,
+};
 
 fn main() {
     let input = include_str!("../input.txt");
@@ -17,10 +20,52 @@ fn main() {
         }
     }
 
-    let ans = part_one(&char_pos, &existing_chars, limit);
-    for a in ans.iter() {
+    let p1 = part_one(&char_pos, &existing_chars, limit);
+    let p2 = part_two(&mut char_pos, &existing_chars, limit);
+    println!("Part 1: {:?}", p1.len());
+    println!("Part 2: {:?}", p2.len());
+    for a in p2.iter() {
         char_2d[a.1][a.0] = '#';
     }
+    println!("{:?}", char_2d);
+}
+
+fn part_two<'a>(
+    char_pos: &'a mut HashMap<(usize, usize), char>,
+    existing_chars: &HashSet<char>,
+    limit: i32,
+) -> HashSet<(usize, usize)> {
+    let mut antinode_pos: HashSet<(usize, usize)> = HashSet::new();
+    for char_type in existing_chars.iter() {
+        let positions: HashSet<(usize, usize)> = char_pos
+            .iter()
+            .filter(|&(_, v)| v == char_type)
+            .map(|(&k, _)| k)
+            .collect();
+
+        // Generate all pairs of positions and compute antinodes
+        for i in &positions {
+            for j in &positions {
+                if i != j {
+                    let mut current_positions: HashSet<(usize, usize)> = HashSet::from([*i, *j]);
+                    let mut prev: HashSet<(usize, usize)> = HashSet::new();
+                    loop {
+                        let tmp = get_antinodes(&current_positions, &limit);
+
+                        if tmp == prev {
+                            break;
+                        }
+                        prev.extend(&tmp);
+                        current_positions.extend(tmp);
+                    }
+                    antinode_pos.extend(current_positions);
+                }
+            }
+        }
+        // Exit loop if no new antinodes are found
+        antinode_pos.extend(positions);
+    }
+    return antinode_pos;
 }
 
 fn part_one(
@@ -31,7 +76,7 @@ fn part_one(
     let mut antinode_pos: HashSet<(usize, usize)> = Default::default();
 
     for char_type in existing_chars.iter() {
-        let positions: Vec<(usize, usize)> = char_pos
+        let positions: HashSet<(usize, usize)> = char_pos
             .iter()
             .filter(|&(_, v)| v == char_type)
             .map(|(&k, _)| k)
@@ -41,11 +86,10 @@ fn part_one(
     }
     // remove those whose position also exist in char_pos
     //antinode_pos.retain(|pos| !char_pos.contains_key(pos));
-    println!("Part 1: {:?}", antinode_pos.len());
     return antinode_pos;
 }
 
-fn get_antinodes(positions: &Vec<(usize, usize)>, limit: &i32) -> HashSet<(usize, usize)> {
+fn get_antinodes(positions: &HashSet<(usize, usize)>, limit: &i32) -> HashSet<(usize, usize)> {
     let mut anti_nodes: HashSet<(usize, usize)> = Default::default();
     for (i_ind, i) in positions.iter().enumerate() {
         for (j_ind, j) in positions.iter().enumerate() {
