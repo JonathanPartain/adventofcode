@@ -1,11 +1,12 @@
-use std::{collections::VecDeque, process::exit, usize};
+use std::{collections::VecDeque, time::Instant, usize};
 
 fn main() {
-    let input = include_str!("../small.txt");
+    let start = Instant::now();
+    let input = include_str!("../input.txt");
     let chars: Vec<char> = input.lines().map(|l| l.chars().collect()).nth(0).unwrap();
-    let list: &str = input.lines().nth(0).unwrap();
-    //part_one(&chars);
+    part_one(&chars);
     part_two(&chars);
+    println!("time elapsed: {:.3?}", start.elapsed());
 }
 
 fn build_disk(char_list: &Vec<char>) -> Vec<i32> {
@@ -69,29 +70,18 @@ fn part_one(char_list: &Vec<char>) {
     }
 
     let check_sum = calc_checksum(&ret_vec);
-    println!("{:?}", check_sum);
+    println!("Part 1: {:?}", check_sum);
 }
 // insert_item(&mut ret_vec, &size, &-1, &saved_item) {
-fn insert_item(
-    list: &Vec<i32>,
-    size: &usize,
-    item: &i32,
-    check_for: &i32,
-) -> ((usize, usize), bool) {
+fn insert_item(list: &Vec<i32>, size: &usize, check_for: &i32) -> ((usize, usize), bool) {
     let mut start: usize = 0;
     let mut end: usize = 0;
     let mut inserting: bool = false;
 
-    println!("Replace item {:?} for size {:?}", item, size);
     for (k, &v) in list.iter().enumerate() {
         if v != *check_for && inserting && end >= start {
             let diff: i32 = end as i32 - start as i32 + 1;
-            println!(
-                "diff {:?} end {:?} start {:?} size {:?}",
-                diff, end, start, size
-            );
             if diff >= *size as i32 {
-                println!("start: {start}, end: {end}");
                 // remove
                 return ((start, end - 1), true);
             }
@@ -115,10 +105,9 @@ fn insert_item(
 fn part_two(char_list: &Vec<char>) {
     let disk = build_disk(char_list);
 
-    let mut disk_v = Vec::from(disk.clone());
+    let disk_v = Vec::from(disk.clone());
     let disk_len = disk_v.len();
-    let mut head = 0;
-    let mut tail = disk_len - 1;
+    let tail = disk_len - 1;
 
     let mut ret_vec: Vec<i32> = disk_v.clone();
     let mut _popped_dots = 0;
@@ -136,69 +125,46 @@ fn part_two(char_list: &Vec<char>) {
                 saved_item = tail_item;
                 continue;
             }
-            println!("Found {} of type {} at index {}", size, saved_item, i);
-            println!(
-                "{:?}",
-                ret_vec
-                    .iter()
-                    .map(|&n| if n == -1 {
-                        ".".to_string()
-                    } else {
-                        n.to_string()
-                    })
-                    .collect::<String>()
-            );
             // insert
-            let mut remove;
+            let remove;
             let range;
-            println!("size before insert: {}", size);
-            (range, remove) = insert_item(&mut ret_vec, &size, &saved_item, &-1);
-            println!("size after insert: {}", size);
+            (range, remove) = insert_item(&mut ret_vec, &size, &-1);
             if remove {
                 let add_s = range.0;
                 let add_e = add_s + size - 1;
 
                 if add_s < i {
-                    println!("add {saved_item} at {add_s} to {add_e}");
                     if add_s == add_e {
                         ret_vec[add_s] = saved_item;
                     } else {
                         for x in add_s..=add_e {
-                            println!("ret_vec[{x}] = {saved_item}");
                             ret_vec[x] = saved_item;
                         }
                     }
                     let rem_s = i + 1;
                     let rem_e = rem_s + &size - 1;
 
-                    println!("Remove old items at {rem_s} to {rem_e}");
                     if rem_s == rem_e {
                         ret_vec[rem_s] = -1;
                     } else {
                         for x in 1..=size {
-                            println!("ret_vec[{}] = -1", x + i);
                             ret_vec[x + i] = -1;
                         }
                     }
                 }
             }
             size = 0;
-            println!(
-                "{:?}",
-                ret_vec
-                    .iter()
-                    .map(|&n| if n == -1 {
-                        ".".to_string()
-                    } else {
-                        n.to_string()
-                    })
-                    .collect::<String>()
-            );
 
             saved_item = tail_item;
         }
         size += 1;
-        head += 1;
-        println!();
     }
+    let mut chksum: u128 = 0;
+    for (i, v) in ret_vec.iter().enumerate() {
+        if v > &-1 {
+            let n = i as u128 * *v as u128;
+            chksum += n;
+        }
+    }
+    println!("Part 2: {chksum}");
 }
