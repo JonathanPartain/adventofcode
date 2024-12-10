@@ -8,7 +8,8 @@ fn main() {
         .collect();
 
     println!("Map: {:?}", digit_map);
-    part_one(&digit_map);
+    //part_one(&digit_map);
+    part_two(&digit_map);
 }
 
 fn part_one(map: &Vec<Vec<u32>>) {
@@ -25,23 +26,48 @@ fn part_one(map: &Vec<Vec<u32>>) {
     let mut out: Vec<(usize, usize)> = vec![];
 
     for (i, start) in start_pos.iter().enumerate() {
-        let mut endpoints: HashSet<(usize, usize)> = Default::default();
+        let mut endpoints: Vec<(usize, usize)> = Default::default();
         println!("Starting at {:?}", start);
         walk_one(map, *start, *start, 0, map.len(), &mut endpoints);
-        println!("endpoints: {:?}", endpoints);
-        all_scored += endpoints.len();
+        // get set
+        let hs: HashSet<&(usize, usize)> = HashSet::from_iter(endpoints.iter());
+        println!("endpoints: {:?}", hs);
+        all_scored += hs.len();
     }
 
     println!("Score: {:?}", all_scored);
 }
 
+fn part_two(map: &Vec<Vec<u32>>) {
+    let mut start_pos: Vec<(usize, usize)> = vec![];
+    for (row_index, row) in map.iter().enumerate() {
+        for (col_index, col) in row.iter().enumerate() {
+            if map[row_index][col_index] == 0 {
+                start_pos.push((row_index, col_index));
+            }
+        }
+    }
+
+    let mut all_scored = 0;
+    let mut out: Vec<(usize, usize)> = vec![];
+
+    for (i, start) in start_pos.iter().enumerate() {
+        let mut endpoints: Vec<(usize, usize)> = Default::default();
+        println!("Starting at {:?}", start);
+        walk_one(map, *start, *start, 0, map.len(), &mut endpoints);
+        // get set
+        all_scored += endpoints.len();
+    }
+
+    println!("Score: {:?}", all_scored);
+}
 fn walk_one(
     map: &Vec<Vec<u32>>,
     pos: (usize, usize),
     prev: (usize, usize),
     curr_height: u32,
     bound: usize,
-    path: &mut HashSet<(usize, usize)>,
+    path: &mut Vec<(usize, usize)>,
 ) {
     //-> Vec<(usize, usize)> {
     let mut next: Vec<(usize, usize)> = vec![];
@@ -49,7 +75,7 @@ fn walk_one(
     println!("from {:?} to here : {:?}", prev, pos);
     if curr_height == 9 {
         println!("Path reached");
-        path.insert(pos);
+        path.push(pos);
         return; //path.to_vec();
     }
     //sleep(Duration::from_secs(1));
