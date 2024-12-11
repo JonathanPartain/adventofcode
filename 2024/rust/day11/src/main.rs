@@ -1,6 +1,7 @@
-use std::{collections::HashMap, u128};
+use std::{collections::HashMap, time::Instant, u128};
 
 fn main() {
+    let start = Instant::now();
     let file = include_str!("../input.txt");
     let numbers: Vec<u128> = file
         .lines()
@@ -11,13 +12,16 @@ fn main() {
         .collect();
 
     let start_vec = numbers.clone();
-    part_one(&start_vec);
+    // done in part two
+    //part_one(&start_vec);
     part_two(&start_vec);
+    println!("time elapsed: {:.3?}", start.elapsed());
 }
-fn part_one(numbers: &Vec<u128>) {
+
+fn _part_one(numbers: &Vec<u128>) {
     let mut start_vec = numbers.clone();
     for _ in 1..=25 {
-        start_vec = rules(&start_vec);
+        start_vec = _rules_old(&start_vec);
     }
 
     println!("Part one: {}", start_vec.len());
@@ -28,18 +32,17 @@ fn part_two(numbers: &Vec<u128>) {
         .map(|val| (*val, 1))
         .collect::<HashMap<_, _>>();
 
-    for _ in 1..=75 {
-        start_map = rules_2(&start_map);
-    }
-    let mut sum = 0;
-    for (_, v) in start_map.iter() {
-        sum += v;
+    for i in 1..=75 {
+        start_map = rules(&start_map);
+        if i == 25 {
+            println!("Part one: {}", start_map.values().sum::<u128>());
+        }
     }
 
-    println!("Part two: {}", sum);
+    println!("Part two: {}", start_map.values().sum::<u128>());
 }
 
-fn rules_2(l: &HashMap<u128, u128>) -> HashMap<u128, u128> {
+fn rules(l: &HashMap<u128, u128>) -> HashMap<u128, u128> {
     let mut ret_map = HashMap::default();
 
     for (&k, &v) in l.iter() {
@@ -75,7 +78,7 @@ fn rules_2(l: &HashMap<u128, u128>) -> HashMap<u128, u128> {
     }
     return ret_map;
 }
-fn rules(l: &Vec<u128>) -> Vec<u128> {
+fn _rules_old(l: &Vec<u128>) -> Vec<u128> {
     let mut ret_vec: Vec<u128> = Vec::with_capacity(l.len() * 2);
     for &n in l.iter() {
         let str_rep = n.to_string();
