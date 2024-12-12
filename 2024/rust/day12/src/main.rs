@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{collections::HashSet, usize};
+use std::{collections::HashSet, time::Instant, usize};
 
 fn main() {
     let input = include_str!("../input.txt");
@@ -8,6 +8,7 @@ fn main() {
 }
 
 fn part_one(map: &Vec<Vec<char>>) {
+    let start = Instant::now();
     let mut visited: HashSet<(usize, usize)> = Default::default();
     let mut region_map: Vec<Vec<(usize, usize)>> = vec![];
     for (r_i, row) in map.iter().enumerate() {
@@ -28,9 +29,8 @@ fn part_one(map: &Vec<Vec<char>>) {
     }
     let mut sum = 0;
     let mut part2 = 0;
-    //part_two(&region_map);
+
     for region in region_map.iter() {
-        //println!("region: {:?}", region);
         let f = calc_fences(&region);
         let u_r: Vec<_> = region.into_iter().cloned().unique().collect();
         let c = count_corners(&u_r);
@@ -39,8 +39,8 @@ fn part_one(map: &Vec<Vec<char>>) {
         sum += f;
     }
     println!("Part one: {}", sum);
-
     println!("Part two: {}", part2);
+    println!("Time elapsed: {:.3?}", start.elapsed());
 }
 fn count_corners(points: &[(usize, usize)]) -> usize {
     // Store all points in a HashSet for O(1) neighbor checks
@@ -146,7 +146,6 @@ fn calc_fences(l: &Vec<(usize, usize)>) -> usize {
                     if item.1 > 0 {
                         if !set.contains(&(item.0, item.1 - 1)) {
                             tmp += 1;
-                        } else {
                         }
                     } else {
                         // edge
@@ -211,12 +210,10 @@ fn calc_fences(l: &Vec<(usize, usize)>) -> usize {
                     }
                 }
                 fences += tmp;
-                //println!("Row: {}, fences: {}", c, tmp);
             }
             c -= 1;
         }
     }
-    //println!("Area land: {}, fences: {}", set.len(), fences);
     return fences * set.len();
 }
 
@@ -260,6 +257,5 @@ fn get_neighbors(
     for n in res.iter() {
         get_neighbors(map, c, *n, bound, path);
     }
-    // Dead end
-    return next; //vec![];
+    return next;
 }
