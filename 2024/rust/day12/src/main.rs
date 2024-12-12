@@ -1,7 +1,8 @@
-use std::{collections::HashSet, process::exit, usize};
+use itertools::Itertools;
+use std::{collections::HashSet, usize};
 
 fn main() {
-    let input = include_str!("../medium.txt");
+    let input = include_str!("../input.txt");
     let char_2d: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
     part_one(&char_2d);
 }
@@ -27,193 +28,91 @@ fn part_one(map: &Vec<Vec<char>>) {
     }
     let mut sum = 0;
     let mut part2 = 0;
+    //part_two(&region_map);
     for region in region_map.iter() {
         //println!("region: {:?}", region);
         let f = calc_fences(&region);
-        let _sides = calc_edges(&region);
-        let test: Vec<_> = region.into_iter().map(|&(a, b)| (b, a)).collect();
-        let set: HashSet<(usize, usize)> = HashSet::from_iter(region.iter().cloned());
-        println!("{:?}", test);
-        println!();
-        let inv = calc_edges(&test);
-        //println!("sides: {:?}", inv);
-        //println!("sum: {:?}", _sides + inv);
-        println!();
-        println!(
-            "({} + {}) * {} = {}",
-            _sides,
-            inv,
-            set.len(),
-            (_sides + inv) * set.len()
-        );
-        println!();
-        println!();
-        part2 += (_sides + inv) * set.len();
+        let u_r: Vec<_> = region.into_iter().cloned().unique().collect();
+        let c = count_corners(&u_r);
+        part2 += u_r.len() * c;
 
         sum += f;
     }
     println!("Part one: {}", sum);
 
     println!("Part two: {}", part2);
-    println!("{:?}", part2 == 885394);
 }
+fn count_corners(points: &[(usize, usize)]) -> usize {
+    // Store all points in a HashSet for O(1) neighbor checks
+    let point_set: HashSet<(usize, usize)> = points.iter().cloned().collect();
+    let mut corners = 0;
 
-fn calc_edges(l: &Vec<(usize, usize)>) -> usize {
-    // Convert to SET
-    let set: HashSet<(usize, usize)> = HashSet::from_iter(l.iter().cloned());
-    let highest = set.iter().max_by_key(|(x, _)| x).unwrap();
-    let lowest = set.iter().min_by_key(|(x, _)| x).unwrap();
-    let mut sides = 0;
-    let mut c = highest.0;
-    if highest.0 == lowest.0 || highest.1 == lowest.1 {
-        sides = 2;
-    } else {
-        loop {
-            let mut tmp = 0;
-            // highest is highest number, going bottom up
-            if c == highest.0 {
-                let mut c_w: Vec<&(usize, usize)> = set.iter().filter(|(x, _)| *x == c).collect();
-                c_w.sort_by(|x, y| x.1.cmp(&y.1));
+    for &(row, col) in points {
+        let left = col
+            .checked_sub(1)
+            .map_or(false, |left_col| point_set.contains(&(row, left_col)));
+        let up = row
+            .checked_sub(1)
+            .map_or(false, |up_row| point_set.contains(&(up_row, col)));
+        let right = point_set.contains(&(row, col + 1));
+        let down = point_set.contains(&(row + 1, col));
 
-                println!("set: {:?} ", c_w);
+        let nw = if row > 0 && col > 0 {
+            point_set.contains(&(row - 1, col - 1))
+        } else {
+            false
+        };
 
-                sides += 1; // outside range
-                tmp += 1; // outside range
-                let mut start_side = false;
+        let ne = if row > 0 {
+            point_set.contains(&(row - 1, col + 1))
+        } else {
+            false
+        };
 
-                for item in c_w.iter() {
-                    if item.1 > 0 {
-                        // check if previous number was in
-                        if !set.contains(&(item.0, item.1 - 1)) {
-                            // prev item is not directly to the left
-                            if start_side {
-                                sides += 1;
-                                tmp += 1;
-                            }
-                        }
-                    }
-                    // check above
-                    if !set.contains(&(item.0 - 1, item.1)) {
-                        println!("highest: Found side start above {:?}", item);
-                        start_side = true;
-                    } else if start_side {
-                        // side has started and ended
-                        println!("highest: start above ended {:?}", item);
-                        sides += 1;
-                        tmp += 1;
-                        start_side = false;
-                    }
-                }
-                if start_side {
-                    println!("highest: loop ended with start side true ");
-                    sides += 1; // loop ended with start_side true
-                    tmp += 1;
-                }
-                //println!("Row: {}, fences: {}", c, tmp);
-            } else if c == lowest.0 {
-                let mut c_w: Vec<&(usize, usize)> = set.iter().filter(|(x, _)| *x == c).collect();
-                c_w.sort_by(|x, y| x.1.cmp(&y.1));
-                println!("set: {:?} ", c_w);
+        let se = point_set.contains(&(row + 1, col + 1));
 
-                sides += 1; // outside range
-                tmp += 1; // outside range
-                let mut start_side = false;
-
-                for item in c_w.iter() {
-                    if item.1 > 0 {
-                        // check if previous number was in
-                        if !set.contains(&(item.0, item.1 - 1)) {
-                            // prev item is not directly to the left
-                            if start_side {
-                                sides += 1;
-                                tmp += 1;
-                            }
-                        }
-                    }
-                    // check above
-                    if !set.contains(&(item.0 + 1, item.1)) {
-                        //    println!("lowest: Found side start below {:?}", item);
-                        start_side = true;
-                    } else if start_side {
-                        // side has started and ended
-                        println!("lowest: side start ended {:?}", item);
-                        sides += 1;
-                        tmp += 1;
-                        start_side = false;
-                    }
-                }
-                if start_side {
-                    println!("lowest: loop ended with start side true ");
-                    sides += 1; // loop ended with start_side true
-                    tmp += 1;
-                }
-                // println!("Row: {}, fences: {}", c, tmp);
-                println!("sides for this set: {}", tmp);
-                break;
-            } else {
-                // middle row
-                // items in current row
-                let mut c_w: Vec<&(usize, usize)> = set.iter().filter(|(x, _)| *x == c).collect();
-                c_w.sort_by(|x, y| x.1.cmp(&y.1));
-                println!("set: {:?} ", c_w);
-                let mut start_below = false;
-                let mut start_above = false;
-                for item in c_w.iter() {
-                    if item.1 > 0 {
-                        // check if previous number was in
-                        if !set.contains(&(item.0, item.1 - 1)) {
-                            // prev item is not directly to the left
-                            if start_below {
-                                sides += 1;
-                                tmp += 1;
-                            }
-                            if start_above {
-                                sides += 1;
-                                tmp += 1;
-                            }
-                        }
-                    }
-                    // check above
-                    if !set.contains(&(item.0 - 1, item.1)) {
-                        println!("middle: side start above {:?}", item);
-                        start_above = true;
-                    } else if start_above {
-                        // side has started and ended
-                        println!("middle: side start above ended {:?}", item);
-                        sides += 1;
-                        tmp += 1;
-                        start_above = false;
-                    }
-                    if !set.contains(&(item.0 + 1, item.1)) {
-                        println!("middle: side start below {:?}", item);
-                        start_below = true;
-                    } else if start_below {
-                        println!("middle: side start below ended {:?}", item);
-                        // side has started and ended
-                        sides += 1;
-                        tmp += 1;
-                        start_below = false;
-                    }
-                    // no item
-                }
-                if start_below {
-                    println!("middle: loop ended with start below");
-                    sides += 1; // loop ended with start_side true
-                    tmp += 1;
-                }
-                if start_above {
-                    println!("middle: loop ended with start above");
-                    sides += 1; // loop ended with start_side true
-                    tmp += 1;
-                }
-            }
-            c -= 1;
-
-            println!("sides for this set: {}", tmp);
+        let sw = if col > 0 {
+            point_set.contains(&(row + 1, col - 1))
+        } else {
+            false
+        };
+        // if !left && !up
+        if !left && !up {
+            corners += 1;
+        }
+        // if !left && !down
+        if !left && !down {
+            corners += 1;
+        }
+        // if !right && !up
+        if !right && !up {
+            corners += 1;
+        }
+        // if !right && !down
+        if !right && !down {
+            corners += 1;
+        }
+        // if up && right && !NE
+        if up && right && !ne {
+            corners += 1;
+        }
+        // if up && left && !NW
+        if up && left && !nw {
+            corners += 1;
+        }
+        // if down && left && !SW
+        if down && left && !sw {
+            corners += 1;
+        }
+        // if down && right && !SE
+        if down && right && !se {
+            corners += 1;
         }
     }
-    return sides;
+
+    corners
 }
+
 fn calc_fences(l: &Vec<(usize, usize)>) -> usize {
     // Convert to SET
     let mut fences = 0;
