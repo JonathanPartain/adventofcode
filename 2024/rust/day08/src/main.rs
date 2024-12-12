@@ -1,11 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
+    time::Instant,
     usize,
 };
 
 fn main() {
+    let start: Instant = Instant::now();
     let input = include_str!("../input.txt");
-    let mut char_2d: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
+    let char_2d: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
     let limit: i32 = char_2d.len().try_into().unwrap();
 
     let mut char_pos: HashMap<(usize, usize), char> = Default::default();
@@ -24,10 +26,13 @@ fn main() {
     let p2 = part_two(&mut char_pos, &existing_chars, limit);
     println!("Part 1: {:?}", p1.len());
     println!("Part 2: {:?}", p2.len());
+    /*
     for a in p2.iter() {
         char_2d[a.1][a.0] = '#';
     }
     println!("{:?}", char_2d);
+    */
+    println!("time elapsed: {:.5?}", start.elapsed());
 }
 
 fn part_two<'a>(
