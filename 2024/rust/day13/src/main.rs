@@ -81,13 +81,23 @@ fn calc_section(section: &str, is_part_2: bool) -> i128 {
     if det == 0 {
         return 0;
     }
-
     // math, thanks chatgpt, ddg and kristoffer
+    /*
     let a_press = ((b_x * score_y) - (b_y * score_x)) / det;
     let b_press = (score_x - (a_press * a_x)) / b_x;
+    */
+    // https://www.reddit.com/r/adventofcode/comments/1hd7irq/2024_day_13_an_explanation_of_the_mathematics/
+    // https://www.youtube.com/watch?v=jBsC34PxzoM
+    // cramers rule
+    //
+    //A = (p_x*b_y - prize_y*b_x) / (a_x*b_y - a_y*b_x)
+    // det == last part
+    let a_p = (score_x * b_y - score_y * b_x) / (a_x * b_y - a_y * b_x);
+    //B = (a_x*p_y - a_y*p_x) / (a_x*b_y - a_y*b_x)
+    let b_p = (a_x * score_y - a_y * score_x) / (a_x * b_y - a_y * b_x);
 
-    if a_press * a_x + b_press * b_x == score_x && a_press * a_y + b_press * b_y == score_y {
-        return a_press * 3 + b_press;
+    if a_p * a_x + b_p * b_x == score_x && a_p * a_y + b_p * b_y == score_y {
+        return a_p * 3 + b_p;
     }
     return 0;
 }
