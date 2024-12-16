@@ -1,7 +1,8 @@
 use std::{
-    cmp::Reverse,
     collections::{BinaryHeap, HashMap, HashSet},
-    isize, usize, vec,
+    isize,
+    time::Instant,
+    usize, vec,
 };
 #[derive(Eq, PartialEq)]
 // yoinked from mr gippity
@@ -27,9 +28,11 @@ impl PartialOrd for Node {
 // end yoink
 
 fn main() {
+    let start = Instant::now();
     let input = parse_input();
     let max_len = part_one(&input);
     part_two(&input, max_len);
+    println!("Time elapsed: {:.3?}", start.elapsed());
 }
 
 fn parse_input() -> Vec<Vec<char>> {
@@ -204,11 +207,6 @@ fn part_two(input: &Vec<Vec<char>>, max_score: usize) -> usize {
 fn part_one(input: &Vec<Vec<char>>) -> usize {
     let start_pos = get_char_pos(input, &'S');
     let end_pos = get_char_pos(input, &'E');
-    for row in input.iter() {
-        println!("{:?}", row.iter().collect::<String>());
-    }
-
-    println!();
 
     let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
     // key: where you are
