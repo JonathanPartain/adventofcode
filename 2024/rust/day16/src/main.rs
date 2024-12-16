@@ -33,7 +33,7 @@ fn main() {
 }
 
 fn parse_input() -> Vec<Vec<char>> {
-    let input: &str = include_str!("../small.txt");
+    let input: &str = include_str!("../input.txt");
     let map: Vec<Vec<char>> = input.lines().map(|c| c.chars().collect()).collect();
     return map;
 }
@@ -74,14 +74,49 @@ fn get_neighbors(
     }
     neighbors
 }
-fn part_two(input: &Vec<Vec<char>>, max_len: usize) -> usize {
+fn get_neighbors_2(
+    grid: &Vec<Vec<char>>,
+    position: (isize, isize),
+    path: &HashSet<(isize, isize)>,
+    score: &usize,
+    seen: &mut HashMap<(isize, isize), usize>,
+) -> Vec<(isize, isize)> {
+    let (x, y) = position;
+    let mut neighbors = Vec::new();
+
+    // Possible moves: up, down, left, right
+    let deltas: Vec<(isize, isize)> = vec![(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+    for (dx, dy) in deltas.iter() {
+        let nx = x.wrapping_add(*dx) as usize;
+
+        let ny = y.wrapping_add(*dy) as usize;
+        let last_seen_score = *seen
+            .entry((nx as isize, ny as isize))
+            .or_insert(usize::MAX - 1000)
+            + 1000;
+
+        if nx < grid.len()
+            && ny < grid[0].len()
+            && grid[nx][ny] != '#'
+            && !path.contains(&(nx as isize, ny as isize))
+            && score <= &last_seen_score
+        // we might step on a path where we are just about to turn
+        {
+            seen.insert((nx as isize, ny as isize), *score);
+            neighbors.push((nx as isize, ny as isize));
+        }
+    }
+    neighbors
+}
+fn part_two(input: &Vec<Vec<char>>, max_score: usize) -> usize {
     let start_pos = get_char_pos(input, &'S');
     let end_pos = get_char_pos(input, &'E');
 
     let mut open_list = BinaryHeap::new();
     // key: where you are
     // value: where you came from
-    //let mut path: HashMap<(isize, isize), (isize, isize)> = HashMap::new();
+    let mut seen: HashMap<(isize, isize), usize> = HashMap::new();
 
     // Push the starting node
     open_list.push(Node {
@@ -97,7 +132,7 @@ fn part_two(input: &Vec<Vec<char>>, max_len: usize) -> usize {
     let mut min_cost = usize::MAX;
 
     while let Some(current) = open_list.pop() {
-        if current.g_cost > min_cost || current.g_cost > max_len {
+        if current.g_cost > min_cost || current.g_cost > max_score {
             continue;
         }
         //println!("open list len: {:?}", open_list.len());
@@ -118,8 +153,14 @@ fn part_two(input: &Vec<Vec<char>>, max_len: usize) -> usize {
 
         // Explore neighbors here...
 
-        if current.g_cost <= max_len {
-            let n = get_neighbors(input, current.position, &current.path);
+        if current.g_cost <= max_score {
+            let n = get_neighbors_2(
+                input,
+                current.position,
+                &current.path,
+                &current.g_cost,
+                &mut seen,
+            );
             for item in n.iter() {
                 let target_direction = (
                     item.0 as isize - current.position.0 as isize,
@@ -133,6 +174,8 @@ fn part_two(input: &Vec<Vec<char>>, max_len: usize) -> usize {
                 }
 
                 let mut new_path = current.path.clone();
+
+                seen.insert(*item, current.g_cost);
 
                 new_path.insert(*item);
                 open_list.push(Node {
@@ -198,7 +241,7 @@ fn part_one(input: &Vec<Vec<char>>) -> usize {
                 shortest_paths.clear();
             }
             // If no paths or a shorter path found, replace the best paths
-            if current.g_cost == min_cost {
+            if output_cost == min_cost {
                 shortest_paths.push(current.path);
             }
         }
