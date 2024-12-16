@@ -74,6 +74,7 @@ fn get_neighbors(
     }
     neighbors
 }
+// keeping the score for reaching all positions is key!!
 fn get_neighbors_2(
     grid: &Vec<Vec<char>>,
     position: (isize, isize),
