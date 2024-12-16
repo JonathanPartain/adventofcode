@@ -1,15 +1,16 @@
 use std::{
     cmp::Reverse,
-    collections::{BinaryHeap, HashMap},
-    isize, usize,
+    collections::{BinaryHeap, HashMap, HashSet},
+    isize, usize, vec,
 };
 #[derive(Eq, PartialEq)]
-
 // yoinked from mr gippity
+#[derive(Debug)]
 struct Node {
     position: (isize, isize),
     rotation: (isize, isize), // [(0, -1), (1, 0), (0, 1), (-1, 0)]; // North, East, South, West
     g_cost: usize,
+    path: HashSet<(isize, isize)>,
 }
 
 // To allow comparison in BinaryHeap
@@ -27,11 +28,12 @@ impl PartialOrd for Node {
 
 fn main() {
     let input = parse_input();
-    part_one(&input);
+    let max_len = part_one(&input);
+    part_two(&input, max_len);
 }
 
 fn parse_input() -> Vec<Vec<char>> {
-    let input: &str = include_str!("../input.txt");
+    let input: &str = include_str!("../small.txt");
     let map: Vec<Vec<char>> = input.lines().map(|c| c.chars().collect()).collect();
     return map;
 }
@@ -46,40 +48,114 @@ fn get_char_pos(map: &Vec<Vec<char>>, char: &char) -> (isize, isize) {
     }
     unreachable!();
 }
-
 fn get_neighbors(
     grid: &Vec<Vec<char>>,
     position: (isize, isize),
-    path: &HashMap<(isize, isize), (isize, isize)>,
+    path: &HashSet<(isize, isize)>,
 ) -> Vec<(isize, isize)> {
     let (x, y) = position;
     let mut neighbors = Vec::new();
 
     // Possible moves: up, down, left, right
     let deltas: Vec<(isize, isize)> = vec![(-1, 0), (1, 0), (0, -1), (0, 1)];
-    for (dx, dy) in deltas.iter() {
-        let nx = x.wrapping_add(*dx as isize) as usize;
 
-        let ny = y.wrapping_add(*dy as isize) as usize;
+    for (dx, dy) in deltas.iter() {
+        let nx = x.wrapping_add(*dx) as usize;
+
+        let ny = y.wrapping_add(*dy) as usize;
 
         if nx < grid.len()
             && ny < grid[0].len()
             && grid[nx][ny] != '#'
-            && !path.contains_key(&(nx as isize, ny as isize))
+            && !path.contains(&(nx as isize, ny as isize))
         {
             neighbors.push((nx as isize, ny as isize));
         }
     }
     neighbors
 }
+fn part_two(input: &Vec<Vec<char>>, max_len: usize) -> usize {
+    let start_pos = get_char_pos(input, &'S');
+    let end_pos = get_char_pos(input, &'E');
 
-// Step function:
-// map - map we are walking through
-// visited - places we have been
-// end_pos - final pos
-// prev_pos - where I was
-// rotation - what rotation do I have
-// current_score - need to know which is cheaper
+    let mut open_list = BinaryHeap::new();
+    // key: where you are
+    // value: where you came from
+    //let mut path: HashMap<(isize, isize), (isize, isize)> = HashMap::new();
+
+    // Push the starting node
+    open_list.push(Node {
+        position: start_pos,
+        rotation: (0, 1),
+        g_cost: 0,
+        path: HashSet::from_iter(vec![start_pos]),
+    });
+
+    let mut output_cost = 0;
+
+    let mut shortest_paths = Vec::new();
+    let mut min_cost = usize::MAX;
+
+    while let Some(current) = open_list.pop() {
+        if current.g_cost > min_cost || current.g_cost > max_len {
+            continue;
+        }
+        //println!("open list len: {:?}", open_list.len());
+        //println!("current cost: {:?}", current.g_cost);
+
+        if current.position == end_pos {
+            output_cost = current.g_cost;
+            if output_cost < min_cost {
+                min_cost = output_cost;
+                shortest_paths.clear();
+            }
+            // If no paths or a shorter path found, replace the best paths
+            if current.g_cost == min_cost {
+                shortest_paths.push(current.path);
+            }
+            continue;
+        }
+
+        // Explore neighbors here...
+
+        if current.g_cost <= max_len {
+            let n = get_neighbors(input, current.position, &current.path);
+            for item in n.iter() {
+                let target_direction = (
+                    item.0 as isize - current.position.0 as isize,
+                    item.1 as isize - current.position.1 as isize,
+                );
+                let mut g_cost = current.g_cost + 1;
+                if target_direction.0 != current.rotation.0
+                    || target_direction.1 != current.rotation.1
+                {
+                    g_cost += 1000;
+                }
+
+                let mut new_path = current.path.clone();
+
+                new_path.insert(*item);
+                open_list.push(Node {
+                    position: *item,
+                    rotation: target_direction,
+                    g_cost,
+                    path: new_path,
+                });
+                //path.insert(*item, current.position);
+            }
+        }
+    }
+
+    let mut unique_tuples: HashSet<_> = HashSet::new();
+    for list in shortest_paths.iter() {
+        for item in list.iter() {
+            unique_tuples.insert(item);
+        }
+    }
+    println!("Part two: {:?}", unique_tuples.len());
+
+    return output_cost;
+}
 
 fn part_one(input: &Vec<Vec<char>>) -> usize {
     let start_pos = get_char_pos(input, &'S');
@@ -90,25 +166,41 @@ fn part_one(input: &Vec<Vec<char>>) -> usize {
 
     println!();
 
-    let mut open_list = BinaryHeap::new();
+    let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
     // key: where you are
     // value: where you came from
-    let mut path: HashMap<(isize, isize), (isize, isize)> = HashMap::new();
-    let mut g_costs: HashMap<(isize, isize), usize> = HashMap::new();
+    let mut path: HashSet<(isize, isize)> = HashSet::new();
 
     // Push the starting node
-    open_list.push(Node {
+    let start = Node {
         position: start_pos,
         rotation: (0, 1),
         g_cost: 0,
-    });
+        path: HashSet::from_iter(vec![start_pos]),
+    };
+
+    open_list.push(start);
     let mut output_cost = 0;
 
-    // A* loop (to be implemented)
+    let mut shortest_paths = Vec::new();
+    let mut min_cost = usize::MAX;
+
     while let Some(current) = open_list.pop() {
+        if current.g_cost > min_cost {
+            break;
+        }
+
         if current.position == end_pos {
             output_cost = current.g_cost;
-            break;
+
+            if output_cost < min_cost {
+                min_cost = output_cost;
+                shortest_paths.clear();
+            }
+            // If no paths or a shorter path found, replace the best paths
+            if current.g_cost == min_cost {
+                shortest_paths.push(current.path);
+            }
         }
 
         // Explore neighbors here...
@@ -122,38 +214,26 @@ fn part_one(input: &Vec<Vec<char>>) -> usize {
             let mut g_cost = current.g_cost + 1;
             if target_direction.0 != current.rotation.0 || target_direction.1 != current.rotation.1
             {
-                println!("position: {:?}", current.position);
-                println!("Target dir: {:?}", target_direction);
-                println!("current rot: {:?}", current.rotation);
                 g_cost += 1000;
             }
-            if g_cost < *g_costs.get(item).unwrap_or(&usize::MAX) {
-                g_costs.insert(*item, g_cost);
-                open_list.push(Node {
-                    position: *item,
-                    rotation: target_direction,
-                    g_cost,
-                });
-                path.insert(*item, current.position);
-            }
 
-            println!("current cost: {}", g_cost);
-            open_list.push(Node {
+            path.insert(*item);
+            let next = Node {
                 position: *item,
                 rotation: target_direction,
                 g_cost,
-            });
-            path.insert(*item, current.position);
+                path: path.clone(),
+            };
+            open_list.push(next);
+            //path.insert(*item, current.position);
         }
     }
-    let mut path_vec = vec![end_pos];
-    let mut current = end_pos;
 
-    println!("{:?}", path_vec);
-    println!("{:?}", output_cost);
+    println!("Part one: {:?}", output_cost);
 
     return output_cost;
 }
+//fn part_two(input: &Vec<Vec<char>>) -> usize {}
 
 #[cfg(test)]
 mod tests {
