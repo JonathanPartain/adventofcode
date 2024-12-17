@@ -1,6 +1,7 @@
-use std::{char, fmt::Pointer, usize};
+use std::{time::Instant, usize};
 
 fn main() {
+    let start = Instant::now();
     let input = include_str!("../input.txt");
     let sections: Vec<&str> = input.split("\n\n").collect();
     let mut registers: Vec<i64> = vec![];
@@ -20,13 +21,71 @@ fn main() {
         };
         instructions = tmp.1.trim().split(",").collect();
     }
-    println!("Registers: {:?}", registers);
-    println!("Instructions: {:?}", instructions);
 
-    part_one(&registers, &instructions);
+    let p1 = part_one(&registers, &instructions);
+    println!("Part 1: {}", p1);
+    // let r = vec![36371366, 0, 0];
+    //    let p2 = part_one(&r, &instructions);
+    //println!("Part 2: {}", p2);
+    part_two(&instructions, instructions.join(","));
+    println!("Time elapsed: {:.3?}", start.elapsed());
 }
 
-fn part_one(registers: &Vec<i64>, ins: &Vec<&str>) {
+fn to_match(n: usize, expected: &String) -> String {
+    let ret: String = expected
+        .chars()
+        .rev()
+        .take(n)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    return ret;
+}
+
+fn part_two(instructions: &Vec<&str>, expected: String) {
+    // instructions from Input: 2,4,1,5,7,5,1,6,0,3,4,1,5,5,3,0
+    // output len = 16
+    // bst A - store A mod 4 in B
+    // bxl 5- store B xor 5 in B
+    // cdv 5 - store A / 2^B in C
+    // bxl 6 - store B xor 6 in B
+    // adv 3 - store A / 2^3 in A
+    // bxc 1 - store B xor C in B
+    // out 5 - output B mod 8
+    // jnz 0 - pointer set to 0
+    //
+    // from back -> B = 8
+    //              A = 0
+
+    let mut match_n = 1;
+
+    let mut m = to_match(match_n, &expected);
+
+    let mut current = 0;
+
+    loop {
+        let r: Vec<i64> = vec![current, 0, 0];
+        let ans = part_one(&r, &instructions);
+        if ans == expected {
+            println!("Part 2: {}", current);
+            break;
+        }
+        // match one number at a time.
+        // when match happens, multiply x 8 to retain the last number
+        if ans == m {
+            match_n += 2;
+            m = to_match(match_n, &expected);
+            current = current * 8;
+            // get to lowest mult of 8
+            current -= current % 8
+        } else {
+            current += 1;
+        }
+    }
+}
+
+fn part_one(registers: &Vec<i64>, ins: &Vec<&str>) -> String {
     let mut reg = registers.clone();
     let mut pointer = 0;
     let mut outputs: Vec<String> = vec![];
@@ -85,7 +144,7 @@ fn part_one(registers: &Vec<i64>, ins: &Vec<&str>) {
         }
     }
     //"1,5,0,3,7,3,0,3,1"
-    println!("Part 1: {:?}", outputs.join(","));
+    return outputs.join(",");
 }
 
 fn calc_combo(reg: &Vec<i64>, combo: &str) -> i64 {
@@ -105,16 +164,24 @@ fn cdv(reg: &mut Vec<i64>, combo: &i64) {
     let numerator = reg[0];
     let base: i64 = 2;
     let denomenator = base.pow(*combo as u32);
-    let res = numerator / denomenator;
-    reg[2] = res;
+    if denomenator == 0 {
+        reg[2] = 1;
+    } else {
+        let res = numerator / denomenator;
+        reg[2] = res;
+    }
 }
 
 fn bdv(reg: &mut Vec<i64>, combo: &i64) {
     let numerator = reg[0];
     let base: i64 = 2;
     let denomenator = base.pow(*combo as u32);
-    let res = numerator / denomenator;
-    reg[1] = res;
+    if denomenator == 0 {
+        reg[1] = 1;
+    } else {
+        let res = numerator / denomenator;
+        reg[1] = res;
+    }
 }
 
 fn out(_reg: &mut Vec<i64>, combo: &i64) -> String {
@@ -156,6 +223,10 @@ fn adv(reg: &mut Vec<i64>, combo: &i64) {
     let base: i64 = 2;
     // yolo
     let denomenator = base.pow(*combo as u32);
-    let res = numerator / denomenator;
-    reg[0] = res;
+    if denomenator == 0 {
+        reg[1] = 1;
+    } else {
+        let res = numerator / denomenator;
+        reg[0] = res;
+    }
 }
