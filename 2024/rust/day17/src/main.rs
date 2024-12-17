@@ -1,0 +1,161 @@
+use std::{char, fmt::Pointer, usize};
+
+fn main() {
+    let input = include_str!("../input.txt");
+    let sections: Vec<&str> = input.split("\n\n").collect();
+    let mut registers: Vec<i64> = vec![];
+    let mut instructions: Vec<&str> = vec![];
+
+    for line in sections[0].lines() {
+        let Some(tmp) = line.split_once(':') else {
+            unreachable!()
+        };
+        let number = tmp.1.trim().parse::<i64>().unwrap();
+        registers.push(number);
+    }
+    // should just be one line
+    for line in sections[1].lines() {
+        let Some(tmp) = line.split_once(':') else {
+            unreachable!()
+        };
+        instructions = tmp.1.trim().split(",").collect();
+    }
+    println!("Registers: {:?}", registers);
+    println!("Instructions: {:?}", instructions);
+
+    part_one(&registers, &instructions);
+}
+
+fn part_one(registers: &Vec<i64>, ins: &Vec<&str>) {
+    let mut reg = registers.clone();
+    let mut pointer = 0;
+    let mut outputs: Vec<String> = vec![];
+    loop {
+        if pointer >= ins.len() {
+            break;
+        }
+        let instr = ins[pointer];
+        let combo = ins[pointer + 1];
+        match &instr {
+            &"0" => {
+                let c = calc_combo(&reg, combo);
+                // combo operand
+                adv(&mut reg, &c);
+                pointer += 2;
+            }
+            &"1" => {
+                // literal operand
+                bxl(&mut reg, combo);
+                pointer += 2;
+            }
+            &"2" => {
+                // combo operand
+                let c = calc_combo(&reg, combo);
+                bst(&mut reg, &c);
+                pointer += 2;
+            }
+            &"3" => {
+                // literal operand
+                pointer = jnz(&mut reg, combo, &pointer);
+            }
+            &"4" => {
+                bxc(&mut reg, combo);
+                pointer += 2;
+            }
+            &"5" => {
+                // combo operand
+                let c = calc_combo(&reg, combo);
+                outputs.extend(vec![out(&mut reg, &c)]);
+                pointer += 2;
+            }
+            &"6" => {
+                let c = calc_combo(&reg, combo);
+                // combo operand
+                bdv(&mut reg, &c);
+                pointer += 2;
+            }
+            &"7" => {
+                let c = calc_combo(&reg, combo);
+                // combo operand
+                cdv(&mut reg, &c);
+                pointer += 2;
+            }
+            &"8" => {}
+            _ => unreachable!(),
+        }
+    }
+    //"1,5,0,3,7,3,0,3,1"
+    println!("Part 1: {:?}", outputs.join(","));
+}
+
+fn calc_combo(reg: &Vec<i64>, combo: &str) -> i64 {
+    match combo {
+        "0" => 0,
+        "1" => 1,
+        "2" => 2,
+        "3" => 3,
+        "4" => reg[0],
+        "5" => reg[1],
+        "6" => reg[2],
+        _ => 0,
+    }
+}
+
+fn cdv(reg: &mut Vec<i64>, combo: &i64) {
+    let numerator = reg[0];
+    let base: i64 = 2;
+    let denomenator = base.pow(*combo as u32);
+    let res = numerator / denomenator;
+    reg[2] = res;
+}
+
+fn bdv(reg: &mut Vec<i64>, combo: &i64) {
+    let numerator = reg[0];
+    let base: i64 = 2;
+    let denomenator = base.pow(*combo as u32);
+    let res = numerator / denomenator;
+    reg[1] = res;
+}
+
+fn out(_reg: &mut Vec<i64>, combo: &i64) -> String {
+    let out_val = combo % 8;
+    let v = out_val.to_string();
+    return v;
+}
+
+fn bxc(reg: &mut Vec<i64>, _combo: &str) {
+    let b_rec = reg[1];
+    let c_rec = reg[2];
+    let xord = b_rec ^ c_rec;
+    reg[1] = xord;
+}
+
+fn jnz(reg: &mut Vec<i64>, combo: &str, pointer: &usize) -> usize {
+    let a_record = reg[0];
+    let num_val = combo.parse::<usize>().unwrap();
+    match a_record {
+        0 => return *pointer + 2,
+        _ => return num_val,
+    }
+}
+
+fn bst(reg: &mut Vec<i64>, combo: &i64) {
+    let m = combo % 8;
+    reg[1] = m;
+}
+
+fn bxl(reg: &mut Vec<i64>, combo: &str) {
+    let num_val = combo.parse::<i64>().unwrap();
+    let b_val = reg[1];
+    let xord = b_val ^ num_val;
+    reg[1] = xord;
+}
+
+fn adv(reg: &mut Vec<i64>, combo: &i64) {
+    let numerator = reg[0];
+    let base: i64 = 2;
+    // yolo
+    let denomenator = base.pow(*combo as u32);
+    let res = numerator / denomenator;
+    reg[0] = res;
+}
