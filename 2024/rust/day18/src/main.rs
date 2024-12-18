@@ -1,5 +1,7 @@
 use std::{
     collections::{BinaryHeap, HashSet},
+    isize,
+    time::Instant,
     usize,
 };
 
@@ -62,11 +64,11 @@ fn print_map(map: &Vec<Vec<char>>) {
 
 fn main() {
     // build map
+    let start = Instant::now();
     let w = 71;
     let bytes_allowed = 1024;
     let input: &str = include_str!("../input.txt");
     let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
-    print_map(&map);
 
     let coords: Vec<(usize, usize)> = input
         .lines()
@@ -88,19 +90,26 @@ fn main() {
         map[*col][*row] = '#';
         bytes_dropped += 1;
     }
-    print_map(&map);
-    let part_one = part_one(&map);
+    let (part_one, _) = part_one(&map);
     println!("Part one: {:?}", part_one);
     let part_two = part_two(&coords, w);
     println!("Part two: {:?}", part_two);
-    //println!("coords: {:?}", coords);
+    println!("Time elapsed: {:?}", start.elapsed());
 }
 
 fn part_two(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
     let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
+    let (mut path, mut vec_paths) = part_one(&map);
+    let mut combined: HashSet<(isize, isize)> = vec_paths.into_iter().flat_map(|set| set).collect();
     for (_, (row, col)) in coords.iter().enumerate() {
         map[*row][*col] = '#';
-        let path = part_one(&map);
+        if combined.contains(&(*row as isize, *col as isize)) {
+            // coordinate we are placing exists in path
+            (path, vec_paths) = part_one(&map);
+            combined = vec_paths.into_iter().flat_map(|set| set).collect();
+        } else {
+            continue;
+        }
         if path == 0 {
             return (*row, *col);
         }
@@ -108,7 +117,7 @@ fn part_two(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
     unreachable!();
 }
 
-fn part_one(input: &Vec<Vec<char>>) -> usize {
+fn part_one(input: &Vec<Vec<char>>) -> (usize, Vec<HashSet<(isize, isize)>>) {
     let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
     // key: where you are
     // value: where you came from
@@ -164,5 +173,5 @@ fn part_one(input: &Vec<Vec<char>>) -> usize {
         }
     }
 
-    return output_cost;
+    return (output_cost, shortest_paths);
 }
