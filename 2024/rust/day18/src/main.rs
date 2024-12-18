@@ -101,8 +101,11 @@ fn part_two(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
     let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
     let (mut path, mut vec_paths) = part_one(&map);
     let mut combined: HashSet<(isize, isize)> = vec_paths.into_iter().flat_map(|set| set).collect();
-    for (_, (row, col)) in coords.iter().enumerate() {
+    for (i, (row, col)) in coords.iter().enumerate() {
         map[*row][*col] = '#';
+        if i < 1024 {
+            continue;
+        }
         if combined.contains(&(*row as isize, *col as isize)) {
             // coordinate we are placing exists in path
             (path, vec_paths) = part_one(&map);
