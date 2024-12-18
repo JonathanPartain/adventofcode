@@ -92,22 +92,52 @@ fn main() {
     }
     let (part_one, _) = part_one(&map);
     println!("Part one: {:?}", part_one);
-    let part_two = part_two(&coords, w);
+    //let part_two = part_two(&coords, w);
+    let part_two = part_two_bs(&coords, w);
     println!("Part two: {:?}", part_two);
     println!("Time elapsed: {:?}", start.elapsed());
 }
 
-// TODO: BST for coordinates
-// start in middle
-// if works, add half of current length to list
-// else, remove half of current length
-fn part_two_bs(coords: &Vec<(usize, usize)>, len_to_try: usize, w: usize) -> (usize, usize) {
-    let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
-    for i in 0..len_to_try {
-        map[coords[i].0][coords[i].0] = '#';
+// Binary Search for coordinates
+fn part_two_bs(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
+    let mut low = 0;
+    let mut high = coords.len() - 1;
+
+    loop {
+        let current_index = (low + high) / 2;
+        let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
+        for i in 0..=current_index {
+            map[coords[i].0][coords[i].1] = '#';
+        }
+
+        let current_score = part_one(&map).0;
+        let prev_score = if current_index > 0 {
+            // Get the score for the range up to current_index - 1
+            map = vec![vec!['.'; w]; w];
+            for i in 0..=current_index - 1 {
+                map[coords[i].0][coords[i].1] = '#';
+            }
+            part_one(&map).0
+        } else {
+            999 // Default score when current_index is 0
+        };
+
+        if prev_score > 0 && current_score == 0 {
+            return ((coords[current_index]).0, (coords[current_index]).1);
+        }
+        //
+        // path found, increase
+        else if current_score > 0 {
+            low = current_index + 1;
+        }
+        // path not found, decrease
+        else if current_score == 0 {
+            high = current_index - 1;
+        }
     }
-    let (path, _) = part_one(&map);
 }
+// Keep original loop for documentatio
+#[allow(unused)]
 fn part_two(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
     let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
     let (mut path, mut vec_paths) = part_one(&map);
