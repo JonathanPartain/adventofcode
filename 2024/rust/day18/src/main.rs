@@ -97,6 +97,17 @@ fn main() {
     println!("Time elapsed: {:?}", start.elapsed());
 }
 
+// TODO: BST for coordinates
+// start in middle
+// if works, add half of current length to list
+// else, remove half of current length
+fn part_two_bs(coords: &Vec<(usize, usize)>, len_to_try: usize, w: usize) -> (usize, usize) {
+    let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
+    for i in 0..len_to_try {
+        map[coords[i].0][coords[i].0] = '#';
+    }
+    let (path, _) = part_one(&map);
+}
 fn part_two(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
     let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
     let (mut path, mut vec_paths) = part_one(&map);
