@@ -91,7 +91,21 @@ fn main() {
     print_map(&map);
     let part_one = part_one(&map);
     println!("Part one: {:?}", part_one);
+    let part_two = part_two(&coords, w);
+    println!("Part two: {:?}", part_two);
     //println!("coords: {:?}", coords);
+}
+
+fn part_two(coords: &Vec<(usize, usize)>, w: usize) -> (usize, usize) {
+    let mut map: Vec<Vec<char>> = vec![vec!['.'; w]; w];
+    for (_, (row, col)) in coords.iter().enumerate() {
+        map[*row][*col] = '#';
+        let path = part_one(&map);
+        if path == 0 {
+            return (*row, *col);
+        }
+    }
+    unreachable!();
 }
 
 fn part_one(input: &Vec<Vec<char>>) -> usize {
@@ -101,7 +115,6 @@ fn part_one(input: &Vec<Vec<char>>) -> usize {
     let mut path: HashSet<(isize, isize)> = HashSet::new();
     let start_pos = (0, 0);
     let end_pos = (input.len() as isize - 1, input.len() as isize - 1);
-    println!("start: {:?}, end: {:?}", start_pos, end_pos);
 
     // Push the starting node
     let start = Node {
