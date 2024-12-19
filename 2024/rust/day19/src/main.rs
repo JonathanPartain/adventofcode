@@ -1,12 +1,14 @@
-use std::{collections::HashMap, process::exit};
+use std::{collections::HashMap, time::Instant};
 
 fn main() {
+    let start = Instant::now();
     let sections: Vec<&str> = include_str!("../input.txt").split("\n\n").collect();
     let str_frags = sections[0];
     let frags: Vec<&str> = str_frags.split(", ").collect();
 
     let patterns = sections[1];
     part_one(&frags, patterns);
+    println!("Time elapsed: {:.3?}", start.elapsed());
 }
 
 // solution:
@@ -38,8 +40,8 @@ fn can_form_word(
             let (sub_can_form, sub_count) = can_form_word(&target[x..], frags, memo);
             if sub_can_form {
                 can_form = true;
+                total_count += sub_count;
             }
-            total_count += sub_count;
         }
     }
     memo.insert(target.to_string(), (can_form, total_count));
