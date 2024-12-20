@@ -1,6 +1,5 @@
 use std::{
     collections::{BinaryHeap, HashMap, HashSet},
-    isize,
     time::Instant,
     usize, vec,
 };
@@ -69,7 +68,7 @@ fn get_neighbors(
     }
     neighbors
 }
-fn get_path_len(input: &Vec<Vec<char>>, max_len: usize) -> (usize, HashSet<(isize, isize)>) {
+fn get_path_len(input: &Vec<Vec<char>>, max_len: &usize) -> (usize, HashSet<(isize, isize)>) {
     let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
     // key: where you are
     // value: where you came from
@@ -89,7 +88,7 @@ fn get_path_len(input: &Vec<Vec<char>>, max_len: usize) -> (usize, HashSet<(isiz
     let mut out_path = HashSet::new();
 
     while let Some(current) = open_list.pop() {
-        if current.g_cost > min_cost || current.g_cost > max_len {
+        if current.g_cost > min_cost || current.g_cost > *max_len {
             break;
         }
 
@@ -123,6 +122,7 @@ fn get_path_len(input: &Vec<Vec<char>>, max_len: usize) -> (usize, HashSet<(isiz
 
     return (output_cost, out_path);
 }
+
 fn parse_input() -> Vec<Vec<char>> {
     let input: &str = include_str!("../input.txt");
     let map: Vec<Vec<char>> = input.lines().map(|c| c.chars().collect()).collect();
@@ -134,11 +134,144 @@ fn main() {
     let map = parse_input();
     let map_len = map.len();
     let max_len = map_len * map_len;
-    let (path_len, _) = get_path_len(&map, max_len);
+    let (path_len, _) = get_path_len(&map, &max_len);
+
+    let mut dot_count = 0;
+    for (ri, row) in map.iter().enumerate() {
+        for (ci, col) in row.iter().enumerate() {
+            if map[ri][ci] == '.' {
+                dot_count += 1;
+            }
+        }
+    }
     println!("base len : {}", path_len);
-    part_one(&path_len);
+    // 3 min-ish
+    let all_pos_w = get_all_positions(&map);
+    println!("all_pos_w len: {}", all_pos_w.len());
+    println!("dot count : {}", dot_count);
+    part_one(&map, &all_pos_w, 2, &max_len);
+    //println!("All positions and weight to end: {:?}", all_pos_w);
     println!("Time elapsed: {:.3?}", start.elapsed());
 }
+fn part_one(
+    input: &Vec<Vec<char>>,
+    all_paths: &HashMap<(usize, usize), usize>,
+    mh_val: usize,
+    max_len: &usize,
+) {
+    let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
+    // key: where you are
+    // value: where you came from
+    let start_pos = get_char_pos(&input, &'S');
+    let end_pos = get_char_pos(&input, &'E');
+
+    let (cost, path) = get_path_len(input, max_len);
+
+    let mut cheats: HashSet<((usize, usize), (usize, usize))> = HashSet::default();
+    // manhattan distance
+    // abs(x_1 - x_2) + abs(y_1-y_2)
+    for pos in path.iter() {
+        let p_x = pos.0;
+        let p_y = pos.1;
+        let pos_in_dis =
+            positions_within_distance(p_x as usize, p_y as usize, mh_val, input.len(), input.len());
+        println!("px py, {} {}", p_x, p_y);
+        let current_val = all_paths.get(&((p_x as usize), (p_y as usize))).unwrap();
+
+        for pd in pos_in_dis.iter() {
+            let p = all_paths.get(&pd);
+            match p {
+                Some(p) => {
+                    if *current_val > 100 {
+                        if *p < current_val - 100 {
+                            cheats.insert((
+                                (pos.0 as usize, pos.1 as usize),
+                                (pd.0 as usize, pd.1 as usize),
+                            ));
+                        }
+                    }
+                }
+                _ => continue,
+            }
+        }
+    }
+    println!("Part 1: {}", cheats.len());
+}
+
+fn positions_within_distance(
+    x: usize,
+    y: usize,
+    d: usize,
+    max_x: usize,
+    max_y: usize,
+) -> Vec<(usize, usize)> {
+    let mut positions = Vec::new();
+
+    for dx in 0..=d {
+        for dy in 0..=(d - dx) {
+            let new_positions = [
+                (x + dx, y + dy),                             // Top-right quadrant
+                (x + dx, y.saturating_sub(dy)),               // Bottom-right quadrant
+                (x.saturating_sub(dx), y + dy),               // Top-left quadrant
+                (x.saturating_sub(dx), y.saturating_sub(dy)), // Bottom-left quadrant
+            ];
+
+            for &(nx, ny) in &new_positions {
+                if nx <= max_x && ny <= max_y && !positions.contains(&(nx, ny)) {
+                    positions.push((nx, ny));
+                }
+            }
+        }
+    }
+
+    positions
+}
+
+fn get_all_positions(map: &Vec<Vec<char>>) -> HashMap<(usize, usize), usize> {
+    let s_pos = get_char_pos(map, &'S');
+    let e_pos = get_char_pos(map, &'E');
+    let mut no_s_map = map.clone();
+    no_s_map[s_pos.0 as usize][s_pos.1 as usize] = '.';
+
+    no_s_map[e_pos.0 as usize][e_pos.1 as usize] = 'S';
+
+    let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
+
+    let mut all_pos_costs: HashMap<(usize, usize), usize> = HashMap::new();
+    // Push the starting node
+    let start = Node {
+        position: e_pos,
+        g_cost: 0,
+        path: HashSet::from_iter(vec![e_pos]),
+    };
+
+    open_list.push(start);
+    all_pos_costs.insert((e_pos.0 as usize, e_pos.1 as usize), 0);
+
+    while let Some(current) = open_list.pop() {
+        // Explore neighbors here...
+        let n = get_neighbors(map, current.position, &current.path);
+
+        for item in n.iter() {
+            let g_cost = current.g_cost + 1;
+
+            all_pos_costs.insert((item.0 as usize, item.1 as usize), current.g_cost);
+
+            let mut new_path = current.path.clone();
+            new_path.insert(*item);
+            let next = Node {
+                position: *item,
+                g_cost,
+                path: new_path,
+            };
+            open_list.push(next);
+            //path.insert(*item, current.position);
+        }
+    }
+
+    return all_pos_costs;
+}
+
 fn get_legal_cheats(
     map: &Vec<Vec<char>>,
     cheat_pos: (usize, usize),
@@ -149,77 +282,28 @@ fn get_legal_cheats(
                            //let start = get_char_pos(map, &'S');
 
     let mut left = 'x';
-    let mut can_from_left = true;
     let mut right = 'x';
-    let mut can_from_right = true;
     let mut down = 'x';
-    let mut can_from_down = true;
     let mut up = 'x';
-    let mut can_from_up = true;
 
     if cheat_pos.1 > 0 {
         left = map[cheat_pos.0][cheat_pos.1 - 1];
-        // check if can reach from end pos
-        /*
-        let mut t_m = map.clone();
-        t_m[cheat_pos.0][cheat_pos.1] = '#';
-        t_m[start.0 as usize][start.1 as usize] = '#';
-        t_m[cheat_pos.0][cheat_pos.1 - 1] = 'S';
-        let t_p = get_path_len(&t_m);
-        if t_p.0 > 0 {
-            can_from_left = true;
-        }
-        */
     }
     if cheat_pos.1 < w {
         right = map[cheat_pos.0][cheat_pos.1 + 1];
-        // check if can reach from end pos
-        //
-        /*
-        let mut t_m = map.clone();
-        t_m[cheat_pos.0][cheat_pos.1] = '#';
-        t_m[start.0 as usize][start.1 as usize] = '#';
-        t_m[cheat_pos.0][cheat_pos.1 + 1] = 'S';
-        let t_p = get_path_len(&t_m);
-        if t_p.0 > 0 {
-            can_from_right = true;
-        }
-        */
     }
     if cheat_pos.0 > 0 {
         up = map[cheat_pos.0 - 1][cheat_pos.1];
-        // check if can reach from end pos
-        /*
-        let mut t_m = map.clone();
-        t_m[cheat_pos.0][cheat_pos.1] = '#';
-        t_m[start.0 as usize][start.1 as usize] = '#';
-        t_m[cheat_pos.0 - 1][cheat_pos.1] = 'S';
-        let t_p = get_path_len(&t_m);
-        if t_p.0 > 0 {
-            can_from_up = true;
-        }
-        */
     }
     if cheat_pos.0 < w {
         down = map[cheat_pos.0 + 1][cheat_pos.1];
-        // check if can reach from end pos
-        /*
-        let mut t_m = map.clone();
-        t_m[cheat_pos.0][cheat_pos.1] = '#';
-        t_m[start.0 as usize][start.1 as usize] = '#';
-        t_m[cheat_pos.0 + 1][cheat_pos.1] = 'S';
-        let t_p = get_path_len(&t_m);
-        if t_p.0 > 0 {
-            can_from_down = true;
-        }
-        */
     }
     //
     // from pos to right
     // left needs to be '.'
     // if right is '#' -> right + 1 needs to be '.' or 'e'
     // else if right is '.' or 'E', valid
-    if (left == '.' || left == 'S') && can_from_right {
+    if left == '.' || left == 'S' {
         if right == '#' && cheat_pos.1 <= w {
             // maybe w-1
             let tmp = map[cheat_pos.0][cheat_pos.1 + 2];
@@ -234,7 +318,7 @@ fn get_legal_cheats(
     // up needs to be '.'
     // if down is '#' down + 1 needs to be '.' or e
     // else if down is '.' or 'E', valid
-    if (up == '.' || up == 'S') && can_from_down {
+    if up == '.' || up == 'S' {
         if down == '#' && cheat_pos.0 <= w {
             // maybe w-1
             let tmp = map[cheat_pos.0 + 2][cheat_pos.1];
@@ -249,7 +333,7 @@ fn get_legal_cheats(
     // right needs to be '.'
     // if left is '#' -> left - 1 needs to be '.' or 'e'
     // else if left is '.' or 'E', valid
-    if (right == '.' || right == 'S') && can_from_left {
+    if right == '.' || right == 'S' {
         if left == '#' && cheat_pos.1 > 0 {
             //
             // maybe 1
@@ -268,7 +352,7 @@ fn get_legal_cheats(
     // if up is '#' up- 1 needs to be '.' or e
     // else if up is '.' or 'E', valid
     //
-    if (down == '.' || down == 'S') && can_from_up {
+    if down == '.' || down == 'S' {
         if up == '#' && cheat_pos.0 > 0 {
             // maybe 1
             let tmp = map[cheat_pos.0 - 2][cheat_pos.1];
@@ -282,7 +366,8 @@ fn get_legal_cheats(
     return cheat_spots;
 }
 
-fn part_one(base_len: &usize) {
+// took like 5 minutes
+fn part_one_old(base_len: &usize) {
     let map = parse_input();
     let mut cheat_spots = HashSet::new();
     // loop from larger than 0, less than w
@@ -309,7 +394,7 @@ fn part_one(base_len: &usize) {
         if r_2 != 'S' && r_2 != 'E' {
             tmp_map[p2.0][p2.1] = '2';
         }
-        let (len, p) = get_path_len(&tmp_map, *base_len);
+        let (len, p) = get_path_len(&tmp_map, base_len);
         let diff = base_len - len;
 
         // path needs to contain both cheat positions
@@ -333,6 +418,7 @@ fn part_one(base_len: &usize) {
     }
     println!("Part 1: {:?}", num_of_good_cheats);
 }
+
 #[allow(dead_code)]
 fn print_map(map: &Vec<Vec<char>>) {
     for row in map.iter() {
