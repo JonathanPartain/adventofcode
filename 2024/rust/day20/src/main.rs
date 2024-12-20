@@ -1,5 +1,6 @@
 use std::{
     collections::{BinaryHeap, HashMap, HashSet},
+    os::unix::raw::uid_t,
     time::Instant,
     usize, vec,
 };
@@ -134,38 +135,56 @@ fn main() {
     let map = parse_input();
     let map_len = map.len();
     let max_len = map_len * map_len;
-    let (path_len, _) = get_path_len(&map, &max_len);
 
-    let mut dot_count = 0;
-    for (ri, row) in map.iter().enumerate() {
-        for (ci, col) in row.iter().enumerate() {
-            if map[ri][ci] == '.' {
-                dot_count += 1;
-            }
-        }
-    }
-    println!("base len : {}", path_len);
-    // 3 min-ish
-    let all_pos_w = get_all_positions(&map);
-    println!("all_pos_w len: {}", all_pos_w.len());
-    println!("dot count : {}", dot_count);
-    part_one(&map, &all_pos_w, 2, &max_len);
+    let min_diff = 100;
+
+    let path_cost_to_end = get_all_positions(&map);
+
+    let mut s_modified = map.clone();
+    let s_m_e = get_char_pos(&s_modified, &'E');
+    let s_m_s = get_char_pos(&s_modified, &'S');
+    s_modified[s_m_e.0 as usize][s_m_e.1 as usize] = '.';
+    s_modified[s_m_s.0 as usize][s_m_s.1 as usize] = 'E';
+
+    let path_cost_from_start = get_all_positions(&s_modified);
+
+    let p1 = solve(
+        &map,
+        &path_cost_to_end,
+        &path_cost_from_start,
+        2,
+        min_diff,
+        &usize::MAX,
+    );
+    println!("Part 1: {}", p1);
+    let p2 = solve(
+        &map,
+        &path_cost_to_end,
+        &path_cost_from_start,
+        20,
+        min_diff,
+        &usize::MAX,
+    );
+    // lower than 1070481
+    // not 1010070
+    // higher than 939631
+    println!("Part 2: {}", p2);
     //println!("All positions and weight to end: {:?}", all_pos_w);
     println!("Time elapsed: {:.3?}", start.elapsed());
 }
-fn part_one(
+
+fn solve(
     input: &Vec<Vec<char>>,
-    all_paths: &HashMap<(usize, usize), usize>,
+    path_cost_to_end: &HashMap<(usize, usize), usize>,
+    path_cost_from_start: &HashMap<(usize, usize), usize>,
     mh_val: usize,
+    min_diff: usize,
     max_len: &usize,
-) {
-    let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
+) -> usize {
     // key: where you are
     // value: where you came from
-    let start_pos = get_char_pos(&input, &'S');
-    let end_pos = get_char_pos(&input, &'E');
 
-    let (cost, path) = get_path_len(input, max_len);
+    let (base_len, path) = get_path_len(input, max_len);
 
     let mut cheats: HashSet<((usize, usize), (usize, usize))> = HashSet::default();
     // manhattan distance
@@ -173,29 +192,64 @@ fn part_one(
     for pos in path.iter() {
         let p_x = pos.0;
         let p_y = pos.1;
-        let pos_in_dis =
-            positions_within_distance(p_x as usize, p_y as usize, mh_val, input.len(), input.len());
-        println!("px py, {} {}", p_x, p_y);
-        let current_val = all_paths.get(&((p_x as usize), (p_y as usize))).unwrap();
 
-        for pd in pos_in_dis.iter() {
-            let p = all_paths.get(&pd);
-            match p {
-                Some(p) => {
-                    if *current_val > 100 {
-                        if *p < current_val - 100 {
-                            cheats.insert((
-                                (pos.0 as usize, pos.1 as usize),
-                                (pd.0 as usize, pd.1 as usize),
-                            ));
-                        }
+        let legal_starts = get_cheat_start_positions(input, &(p_x as usize, p_y as usize));
+
+        let pos_in_dis = positions_within_distance(
+            p_x as usize,
+            p_y as usize,
+            mh_val,
+            input.len(),
+            input[0].len(),
+        );
+
+        for _ in legal_starts.iter() {
+            let current_val = path_cost_from_start
+                .get(&(pos.0 as usize, pos.1 as usize))
+                .unwrap()
+                + 1;
+
+            for end_pos in pos_in_dis.iter() {
+                if let Some(target_val) = path_cost_to_end.get(end_pos) {
+                    // manhattand distance
+                    let cheat_time = (p_x as isize - end_pos.0 as isize).abs()
+                        + (p_y as isize - end_pos.1 as isize).abs();
+
+                    if current_val + cheat_time as usize + target_val + min_diff < base_len {
+                        cheats.insert((
+                            (p_x as usize, p_y as usize),
+                            (end_pos.0 as usize, end_pos.1 as usize),
+                        ));
                     }
                 }
-                _ => continue,
             }
         }
     }
-    println!("Part 1: {}", cheats.len());
+    return cheats.len();
+}
+
+fn get_cheat_start_positions(
+    input: &Vec<Vec<char>>,
+    curr_pos: &(usize, usize),
+) -> Vec<(usize, usize)> {
+    let mut adjacents = Vec::new();
+    let c_x = curr_pos.0;
+    let c_y = curr_pos.1;
+
+    let neighbors = [
+        (c_x.wrapping_sub(1), c_y), // left
+        (c_x + 1, c_y),             // right
+        (c_x, c_y.wrapping_sub(1)), // up
+        (c_x, c_y + 1),             // down
+    ];
+
+    for &(nx, ny) in &neighbors {
+        if nx < input[c_y].len() && ny < input.len() && input[ny][nx] == '#' {
+            adjacents.push((nx, ny)); // valid adjacent to track
+        }
+    }
+
+    adjacents
 }
 
 fn positions_within_distance(
@@ -208,7 +262,8 @@ fn positions_within_distance(
     let mut positions = Vec::new();
 
     for dx in 0..=d {
-        for dy in 0..=(d - dx) {
+        let dy_max = d - dx;
+        for dy in 0..=dy_max {
             let new_positions = [
                 (x + dx, y + dy),                             // Top-right quadrant
                 (x + dx, y.saturating_sub(dy)),               // Bottom-right quadrant
@@ -228,12 +283,7 @@ fn positions_within_distance(
 }
 
 fn get_all_positions(map: &Vec<Vec<char>>) -> HashMap<(usize, usize), usize> {
-    let s_pos = get_char_pos(map, &'S');
     let e_pos = get_char_pos(map, &'E');
-    let mut no_s_map = map.clone();
-    no_s_map[s_pos.0 as usize][s_pos.1 as usize] = '.';
-
-    no_s_map[e_pos.0 as usize][e_pos.1 as usize] = 'S';
 
     let mut open_list: BinaryHeap<Node> = BinaryHeap::new();
 
@@ -246,7 +296,7 @@ fn get_all_positions(map: &Vec<Vec<char>>) -> HashMap<(usize, usize), usize> {
     };
 
     open_list.push(start);
-    all_pos_costs.insert((e_pos.0 as usize, e_pos.1 as usize), 0);
+    all_pos_costs.insert((e_pos.0 as usize, e_pos.1 as usize), 1);
 
     while let Some(current) = open_list.pop() {
         // Explore neighbors here...
@@ -364,59 +414,6 @@ fn get_legal_cheats(
         }
     }
     return cheat_spots;
-}
-
-// took like 5 minutes
-fn part_one_old(base_len: &usize) {
-    let map = parse_input();
-    let mut cheat_spots = HashSet::new();
-    // loop from larger than 0, less than w
-    // check for '.' (row, col), (row, col+1), '.' and
-    // check for '.' (row, col), (row+1, col), '.'
-    for (row_i, row) in map.iter().enumerate().skip(1) {
-        for (col_i, col) in row.iter().enumerate().skip(1) {
-            if *col == '#' {
-                let tmp_cheats = get_legal_cheats(&map, (row_i, col_i));
-                cheat_spots.extend(tmp_cheats);
-            }
-        }
-    }
-    let mut saves: HashMap<usize, usize> = HashMap::new();
-    for cheat in cheat_spots.iter() {
-        let mut tmp_map = map.clone();
-        let p1 = cheat.0;
-        let p2 = cheat.1;
-        let r_1 = tmp_map[p1.0][p1.1];
-        let r_2 = tmp_map[p2.0][p2.1];
-        if r_1 != 'S' && r_1 != 'E' {
-            tmp_map[p1.0][p1.1] = '1';
-        }
-        if r_2 != 'S' && r_2 != 'E' {
-            tmp_map[p2.0][p2.1] = '2';
-        }
-        let (len, p) = get_path_len(&tmp_map, base_len);
-        let diff = base_len - len;
-
-        // path needs to contain both cheat positions
-        if p.contains(&(p1.0 as isize, p1.1 as isize))
-            && p.contains(&(p2.0 as isize, p2.1 as isize))
-        {
-            for x in p.iter() {
-                let a = tmp_map[x.0 as usize][x.1 as usize];
-                if a != 'S' && a != 'E' && a != '1' && a != '2' {
-                    tmp_map[x.0 as usize][x.1 as usize] = 'O';
-                }
-            }
-            if diff >= 100 {
-                *saves.entry(diff).or_insert(0) += 1;
-            }
-        }
-    }
-    let mut num_of_good_cheats = 0;
-    for (_, v) in saves.into_iter() {
-        num_of_good_cheats += v;
-    }
-    println!("Part 1: {:?}", num_of_good_cheats);
 }
 
 #[allow(dead_code)]
