@@ -1,6 +1,5 @@
 use std::{
     collections::{BinaryHeap, HashMap, HashSet},
-    os::unix::raw::uid_t,
     time::Instant,
     usize, vec,
 };
@@ -133,8 +132,6 @@ fn parse_input() -> Vec<Vec<char>> {
 fn main() {
     let start = Instant::now();
     let map = parse_input();
-    let map_len = map.len();
-    let max_len = map_len * map_len;
 
     let min_diff = 100;
 
@@ -165,11 +162,7 @@ fn main() {
         min_diff,
         &usize::MAX,
     );
-    // lower than 1070481
-    // not 1010070
-    // higher than 939631
     println!("Part 2: {}", p2);
-    //println!("All positions and weight to end: {:?}", all_pos_w);
     println!("Time elapsed: {:.3?}", start.elapsed());
 }
 
@@ -181,14 +174,12 @@ fn solve(
     min_diff: usize,
     max_len: &usize,
 ) -> usize {
-    // key: where you are
-    // value: where you came from
-
+    // base path
     let (base_len, path) = get_path_len(input, max_len);
 
+    // hashmap containing start and end points of cheats
     let mut cheats: HashSet<((usize, usize), (usize, usize))> = HashSet::default();
-    // manhattan distance
-    // abs(x_1 - x_2) + abs(y_1-y_2)
+
     for pos in path.iter() {
         let p_x = pos.0;
         let p_y = pos.1;
@@ -204,17 +195,23 @@ fn solve(
         );
 
         for _ in legal_starts.iter() {
+            // legal neighors, path from start to current pos in path +1
             let current_val = path_cost_from_start
                 .get(&(pos.0 as usize, pos.1 as usize))
                 .unwrap()
                 + 1;
 
+            // for all end_positions
             for end_pos in pos_in_dis.iter() {
+                // get value from end position to the end
                 if let Some(target_val) = path_cost_to_end.get(end_pos) {
-                    // manhattand distance
+                    // manhattan distance of "cheat" path
+                    // abs(x_1 - x_2) + abs(y_1-y_2)
                     let cheat_time = (p_x as isize - end_pos.0 as isize).abs()
                         + (p_y as isize - end_pos.1 as isize).abs();
 
+                    // path to legal_start position + len of cheat_time + from end_position to end
+                    // of path + min_diff (100) needs to be less than base_len to be worth
                     if current_val + cheat_time as usize + target_val + min_diff < base_len {
                         cheats.insert((
                             (p_x as usize, p_y as usize),
@@ -244,6 +241,7 @@ fn get_cheat_start_positions(
     ];
 
     for &(nx, ny) in &neighbors {
+        // starts can only happen in walls
         if nx < input[c_y].len() && ny < input.len() && input[ny][nx] == '#' {
             adjacents.push((nx, ny)); // valid adjacent to track
         }
@@ -282,6 +280,7 @@ fn positions_within_distance(
     positions
 }
 
+// get values for ALL positions to the "end"
 fn get_all_positions(map: &Vec<Vec<char>>) -> HashMap<(usize, usize), usize> {
     let e_pos = get_char_pos(map, &'E');
 
@@ -320,100 +319,6 @@ fn get_all_positions(map: &Vec<Vec<char>>) -> HashMap<(usize, usize), usize> {
     }
 
     return all_pos_costs;
-}
-
-fn get_legal_cheats(
-    map: &Vec<Vec<char>>,
-    cheat_pos: (usize, usize),
-) -> HashSet<((usize, usize), (usize, usize))> {
-    // get all cheats with cheat_pos as start point
-    let mut cheat_spots = HashSet::new();
-    let w = map.len() - 1; // border
-                           //let start = get_char_pos(map, &'S');
-
-    let mut left = 'x';
-    let mut right = 'x';
-    let mut down = 'x';
-    let mut up = 'x';
-
-    if cheat_pos.1 > 0 {
-        left = map[cheat_pos.0][cheat_pos.1 - 1];
-    }
-    if cheat_pos.1 < w {
-        right = map[cheat_pos.0][cheat_pos.1 + 1];
-    }
-    if cheat_pos.0 > 0 {
-        up = map[cheat_pos.0 - 1][cheat_pos.1];
-    }
-    if cheat_pos.0 < w {
-        down = map[cheat_pos.0 + 1][cheat_pos.1];
-    }
-    //
-    // from pos to right
-    // left needs to be '.'
-    // if right is '#' -> right + 1 needs to be '.' or 'e'
-    // else if right is '.' or 'E', valid
-    if left == '.' || left == 'S' {
-        if right == '#' && cheat_pos.1 <= w {
-            // maybe w-1
-            let tmp = map[cheat_pos.0][cheat_pos.1 + 2];
-            if tmp == '.' {
-                cheat_spots.insert((cheat_pos, (cheat_pos.0, cheat_pos.1 + 1)));
-            }
-        } else if right == '.' || right == 'E' {
-            cheat_spots.insert((cheat_pos, (cheat_pos.0, cheat_pos.1 + 1)));
-        }
-    }
-    // from pos to down
-    // up needs to be '.'
-    // if down is '#' down + 1 needs to be '.' or e
-    // else if down is '.' or 'E', valid
-    if up == '.' || up == 'S' {
-        if down == '#' && cheat_pos.0 <= w {
-            // maybe w-1
-            let tmp = map[cheat_pos.0 + 2][cheat_pos.1];
-            if tmp == '.' {
-                cheat_spots.insert((cheat_pos, (cheat_pos.0 + 1, cheat_pos.1)));
-            }
-        } else if down == '.' || down == 'E' {
-            cheat_spots.insert((cheat_pos, (cheat_pos.0 + 1, cheat_pos.1)));
-        }
-    }
-    // from pos to left
-    // right needs to be '.'
-    // if left is '#' -> left - 1 needs to be '.' or 'e'
-    // else if left is '.' or 'E', valid
-    if right == '.' || right == 'S' {
-        if left == '#' && cheat_pos.1 > 0 {
-            //
-            // maybe 1
-            let tmp = map[cheat_pos.0][cheat_pos.1 - 2];
-            if tmp == '.' {
-                cheat_spots.insert((cheat_pos, (cheat_pos.0, cheat_pos.1 - 1)));
-            }
-        } else if left == '.' || left == 'E' {
-            cheat_spots.insert((cheat_pos, (cheat_pos.0, cheat_pos.1 - 1)));
-        }
-    }
-    //
-    //
-    // from pos to up
-    // down needs to be '.'
-    // if up is '#' up- 1 needs to be '.' or e
-    // else if up is '.' or 'E', valid
-    //
-    if down == '.' || down == 'S' {
-        if up == '#' && cheat_pos.0 > 0 {
-            // maybe 1
-            let tmp = map[cheat_pos.0 - 2][cheat_pos.1];
-            if tmp == '.' {
-                cheat_spots.insert((cheat_pos, (cheat_pos.0 - 1, cheat_pos.1)));
-            }
-        } else if up == '.' || up == 'E' {
-            cheat_spots.insert((cheat_pos, (cheat_pos.0 - 1, cheat_pos.1)));
-        }
-    }
-    return cheat_spots;
 }
 
 #[allow(dead_code)]
